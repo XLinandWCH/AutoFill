@@ -55,10 +55,23 @@ suspend fun wjxCrawler(url: String): Map<String, Any>?{
             }
         }
 
+        // 爬取所有题目的 type 属性
+        val typeStrings = questionContainers.map { container ->
+            container.attr("type")  // 获取 type 属性值
+        }
+
+
+        // 转换为 Int
+        val typeInts = typeStrings.map { typeStr ->
+            typeStr.toIntOrNull() ?: 0  // 安全转换
+        }
+        // 结果: [3, 3, 1, 2, ...]
+
         surveyData["title"] = title
         surveyData["divx"] = divx
         surveyData["question"] = questions
         surveyData["option"] = optionAll
+        surveyData["typeInts"] = typeInts
 
 
         println("字典已成功写入")
