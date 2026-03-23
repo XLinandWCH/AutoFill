@@ -31,8 +31,6 @@ fun Home(){
                 HomeContent(
                     surveyData = data.toMutableMap()  // 转换为 MutableMap
                 )
-                // 把字典传递到SolutionFormat包里面
-                SolutionFormat.HomeSolution(surveyData = data)
             }
 
 

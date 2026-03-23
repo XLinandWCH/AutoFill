@@ -1,8 +1,10 @@
 package content
 
 import SolutionFormat.HomeSolution
+import SolutionFormat.AnswerDictionary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
+import androidx.compose.foundation.layout.height
 
 @Composable
 fun HomeContent(surveyData: MutableMap<String, Any>) {
@@ -33,6 +35,12 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
     val error = surveyData["error"] as? String
     val questions = surveyData["question"] as? List<String> ?:emptyList()
     val options = surveyData["option"] as? List<List<String>>?:emptyList()
+    val typeInts = surveyData["typeInts"] as? List<Int> ?: emptyList()
+
+    androidx.compose.runtime.LaunchedEffect(typeInts, options) {
+        AnswerDictionary.initialize(typeInts, options)
+    }
+
 
     val customSelectionColors = TextSelectionColors(
         handleColor = Color.White,          // 手柄颜色（通常设为白色）
@@ -105,33 +113,43 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
                                     modifier = Modifier.padding(vertical = 5.dp)
                                 )
 
-                                currentOption.forEach { option ->
+                                val currentType = typeInts.getOrNull(index) ?: 3
+
+                                if (currentType == 1) {
                                     Card(
                                         modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(6.dp),
                                         colors = CardDefaults.cardColors(
-                                            containerColor = Color(0xFF505050),  // 卡片背景色
+                                            containerColor = Color(0xFF505050),
                                         ),
                                         shape = RoundedCornerShape(2.dp)
-
                                     ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxSize(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = option,
-                                                fontWeight = FontWeight.W300,
-                                                fontSize = 22.sp,
-                                                color = Color.White,
-                                                modifier = Modifier.padding(vertical = 4.dp),
-                                            )
-                                            HomeSolution(surveyData)
-
-                                        }
-
+                                        HomeSolution(questionIndex = index, optionIndex = 0, type = currentType)
                                     }
-
-
+                                } else {
+                                    currentOption.forEachIndexed { optionIndex, option ->
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(6.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Color(0xFF505050),  // 卡片背景色
+                                            ),
+                                            shape = RoundedCornerShape(2.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = option,
+                                                    fontWeight = FontWeight.W300,
+                                                    fontSize = 22.sp,
+                                                    color = Color.White,
+                                                    modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp).weight(1f)
+                                                )
+                                                HomeSolution(questionIndex = index, optionIndex = optionIndex, type = currentType)
+                                            }
+                                        }
+                                    }
                                 }
 
                             }
