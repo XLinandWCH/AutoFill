@@ -1,5 +1,6 @@
 package content
 
+import SolutionFormat.HomeSolution
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -124,6 +125,7 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
                                                 color = Color.White,
                                                 modifier = Modifier.padding(vertical = 4.dp),
                                             )
+                                            HomeSolution(surveyData)
 
                                         }
 
