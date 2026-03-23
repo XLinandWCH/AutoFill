@@ -1,6 +1,5 @@
 package org.example.project
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,9 +23,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-
 @Composable
-fun MenuBar(){
+fun MenuBar(onNavigate: (String) -> Unit){
     Column(
         modifier = Modifier.fillMaxWidth().height(45.dp).background(color = Color(0xFF343434))
     ) {
@@ -41,11 +39,10 @@ fun MenuBar(){
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-
-                MenuButton(name = "主页")
-                MenuButton(name = "运行")
-                MenuButton(name = "设置")
-                MenuButton(name = "文档")
+                MenuButton(name = "主页", onClick = { onNavigate("主页") })
+                MenuButton(name = "运行", onClick = { onNavigate("运行") })
+                MenuButton(name = "设置", onClick = { onNavigate("设置") })
+                MenuButton(name = "文档", onClick = { onNavigate("文档") })
             }
 
             Row(
@@ -68,17 +65,13 @@ fun MenuBar(){
                 }
             }
         }
-
-
     }
-
 }
 
 @Composable
-fun MenuButton(name: String){
-
+fun MenuButton(name: String, onClick: () -> Unit){
     Button(
-        onClick = {""},
+        onClick = onClick,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
             contentColor = Color.White,

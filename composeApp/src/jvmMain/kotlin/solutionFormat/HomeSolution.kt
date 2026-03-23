@@ -35,7 +35,6 @@ object AnswerDictionary {
             val type = typeMap[questionIndex] ?: 3
             
             if (type == 1) {
-                // Split multi-line input into separate strings
                 val lines = value.split("\n")
                 qList.clear()
                 qList.addAll(lines)
