@@ -14,6 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -93,6 +95,7 @@ fun HomeSearch(onSearch : (String) -> Unit){
                                 containerColor = Color(0xF52BAC3B),
                             ),
                             modifier = Modifier.height(44.dp).width(78.dp).padding(6.dp)
+                                .pointerHoverIcon(PointerIcon.Hand)
                         ){
                             Text(
                                 text = "确认",
