@@ -30,11 +30,8 @@ kotlin {
             implementation("io.ktor:ktor-client-cio:2.3.0") // 使用 CIO 引擎
             implementation("org.slf4j:slf4j-simple:2.0.7") // 添加 ktor 依赖
 
-
-
             // 协程支持
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-
 
         }
         commonTest.dependencies {
