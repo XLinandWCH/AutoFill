@@ -72,6 +72,7 @@ suspend fun wjxCrawler(url: String): Map<String, Any>?{
         surveyData["question"] = questions
         surveyData["option"] = optionAll
         surveyData["typeInts"] = typeInts
+        surveyData["url"] = url
 
 
         println("字典已成功写入")

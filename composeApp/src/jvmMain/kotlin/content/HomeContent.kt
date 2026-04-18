@@ -2,6 +2,7 @@ package content
 
 import SolutionFormat.HomeSolution
 import SolutionFormat.AnswerDictionary
+import run.SurveyRunManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -36,9 +37,14 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
     val questions = surveyData["question"] as? List<String> ?:emptyList()
     val options = surveyData["option"] as? List<List<String>>?:emptyList()
     val typeInts = surveyData["typeInts"] as? List<Int> ?: emptyList()
+    val title = surveyData["title"] as? String ?: ""
+    val url = surveyData["url"] as? String ?: ""
 
     androidx.compose.runtime.LaunchedEffect(typeInts, options) {
-        AnswerDictionary.initialize(typeInts, options)
+        AnswerDictionary.initialize(typeInts, options, url)
+        // 同步问卷标题和链接到运行管理器
+        SurveyRunManager.surveyTitle.value = title
+        SurveyRunManager.surveyUrl.value = url
     }
 
 

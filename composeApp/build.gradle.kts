@@ -7,6 +7,17 @@ plugins {
     alias(libs.plugins.composeHotReload)
 }
 
+repositories {
+    // 阿里云镜像仓库
+    maven { url = uri("https://maven.aliyun.com/repository/public/") }
+    maven { url = uri("https://maven.aliyun.com/repository/central/") }
+    maven { url = uri("https://maven.aliyun.com/repository/google/") }
+
+    // 保留官方仓库作为后备
+    mavenCentral()
+    google()
+}
+
 kotlin {
     jvm()
 
@@ -31,8 +42,10 @@ kotlin {
             implementation("org.slf4j:slf4j-simple:2.0.7") // 添加 ktor 依赖
 
             // 协程支持
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 
+            // Playwright 核心库
+            implementation("com.microsoft.playwright:playwright:1.45.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

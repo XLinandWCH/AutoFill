@@ -3,13 +3,16 @@ package SolutionFormat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import kotlin.collections.*
 
 object AnswerDictionary {
     val answers = mutableStateListOf<SnapshotStateList<String>>()
     val typeMap = mutableMapOf<Int, Int>() 
+    var currentUrl: String = ""
 
-    fun initialize(typeInts: List<Int>, optionsList: List<List<String>>) {
-        if (answers.isEmpty() || answers.size != typeInts.size) {
+    fun initialize(typeInts: List<Int>, optionsList: List<List<String>>, url: String = "") {
+        if (answers.isEmpty() || currentUrl != url || answers.size != typeInts.size) {
+            currentUrl = url
             answers.clear()
             typeMap.clear()
             typeInts.forEachIndexed { index, type ->
@@ -62,8 +65,12 @@ object AnswerDictionary {
         }
     }
 
+    fun toPlainList(): List<List<String>> {
+        return answers.map { it.toList() }
+    }
+
     fun printDictionary() {
-        println("Current Answer Dictionary: $answers")
+        println("Current Answer Dictionary: ${toPlainList()}")
     }
 }
 

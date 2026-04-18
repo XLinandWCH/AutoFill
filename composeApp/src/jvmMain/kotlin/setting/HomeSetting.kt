@@ -1,5 +1,6 @@
 package setting
 
+import run.SurveyRunManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -45,8 +48,9 @@ fun HomeSetting() {
         backgroundColor = Color(0xC869EF79).copy(alpha = 0.15f) // 选中背景色（建议半透明）
     )
 
-    var text_thread by remember { mutableStateOf("") }
-    var text_num by remember { mutableStateOf("") }
+    var text_thread by remember { mutableStateOf(SurveyRunManager.threadCount.value.toString()) }
+    var text_num by remember { mutableStateOf(SurveyRunManager.totalTarget.value.toString()) }
+    var isHeadlessMode by remember { mutableStateOf(false) } // 添加Switch状态
 
     CompositionLocalProvider(LocalTextSelectionColors provides customSelectionColors){
         SelectionContainer {
@@ -78,6 +82,9 @@ fun HomeSetting() {
                             onValueChange = { newText ->
                                 val filtered = newText.filter { it.isDigit() }
                                 text_thread = filtered
+                                // 同步写入全局管理器
+                                val value = filtered.toIntOrNull() ?: 1
+                                SurveyRunManager.threadCount.value = value.coerceIn(1, 20)
                             },
                             modifier = Modifier
                                 .width(60.dp)
@@ -132,6 +139,9 @@ fun HomeSetting() {
                             onValueChange = { newText ->
                                 val filtered = newText.filter { it.isDigit() }
                                 text_num = filtered
+                                // 同步写入全局管理器
+                                val value = filtered.toIntOrNull() ?: 1
+                                SurveyRunManager.totalTarget.value = value.coerceAtLeast(1)
                             },
                             modifier = Modifier
                                 .width(60.dp)
@@ -168,10 +178,8 @@ fun HomeSetting() {
                             }
                         )
                     }
+
                 }
-
-
-
 
             }
         }

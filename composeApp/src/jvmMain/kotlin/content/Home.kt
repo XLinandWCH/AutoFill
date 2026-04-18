@@ -9,11 +9,16 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import wjx.wjxCrawler
 
+object GlobalData {
+    // 存储抓取到的数据，放到全局防止切页丢失
+    val surveyData = mutableStateOf<Map<String, Any>?>(null)
+}
+
 @Composable
 fun Home(){
     val scope = rememberCoroutineScope()
-    // 存储抓取到的数据
-    val surveyData = remember { mutableStateOf<Map<String, Any>?>(null) }
+    // 引用全局数据
+    val surveyData = GlobalData.surveyData
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
