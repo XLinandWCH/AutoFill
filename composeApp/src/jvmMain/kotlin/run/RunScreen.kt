@@ -108,7 +108,7 @@ private fun TableHeader() {
         HeaderCell("ID", Modifier.width(60.dp), textColor)
         HeaderCell("线程", Modifier.width(80.dp), textColor)
         HeaderCell("状态", Modifier.width(100.dp), textColor)
-        HeaderCell("耗时", Modifier.width(90.dp), textColor)
+        HeaderCell("任务数", Modifier.width(90.dp), textColor)
         HeaderCell("详情", Modifier.weight(1f), textColor)
     }
 }
@@ -168,11 +168,11 @@ private fun TaskRow(entry: SurveyRunManager.TaskLogEntry) {
             fontSize = 13.sp,
             textAlign = TextAlign.Center
         )
-        // 耗时
+        // 任务数
         Text(
-            text = if (entry.elapsedMs > 0) "${entry.elapsedMs}ms" else "-",
+            text = entry.taskProgress,
             modifier = Modifier.width(90.dp),
-            color = Color(0xFFBBBBBB),
+            color = Color(0xFFFFA726),
             fontSize = 13.sp,
             textAlign = TextAlign.Center
         )

@@ -93,15 +93,13 @@ fun RunSetting() {
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false)
                             )
-                            if (state != SurveyRunManager.RunState.IDLE) {
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = "进度: $completed/$total | 成功: $success | 失败: $fail",
-                                    color = Color(0xFFAAFFAA),
-                                    fontWeight = FontWeight.W300,
-                                    fontSize = 15.sp,
-                                )
-                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = "进度: $success/$total | 成功: $success | 失败: $fail",
+                                color = Color(0xFFAAFFAA),
+                                fontWeight = FontWeight.W300,
+                                fontSize = 15.sp,
+                            )
                         }
 
                         // 右侧：操作按钮
@@ -112,7 +110,7 @@ fun RunSetting() {
                                         text = "运行",
                                         color = Color(0xFF4CAF50),
                                         enabled = true,
-                                        onClick = { SurveyRunManager.start(scope) }
+                                        onClick = { SurveyRunManager.start() }
                                     )
                                 }
 
