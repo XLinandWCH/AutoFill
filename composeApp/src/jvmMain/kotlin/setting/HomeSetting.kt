@@ -181,7 +181,7 @@ fun HomeSetting() {
 
                     // 新增反爬虫控制开关
                     Row(
-                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp),
+                        modifier = Modifier.padding(start = 2.dp, end = 12.dp, top = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         androidx.compose.material3.Checkbox(
@@ -193,7 +193,7 @@ fun HomeSetting() {
                                 uncheckedColor = Color.White
                             )
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(2.dp))
                         Text(
                             text = "开启反爬虫机制",
                             color = Color.White,
@@ -201,7 +201,7 @@ fun HomeSetting() {
                             fontSize = 18.sp
                         )
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
 
                         // 新增无头模式控制开关
                         androidx.compose.material3.Checkbox(

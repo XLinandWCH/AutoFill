@@ -46,6 +46,10 @@ kotlin {
 
             // Playwright 核心库
             implementation("com.microsoft.playwright:playwright:1.45.0")
+
+            // Markdown库
+            implementation("org.jetbrains:markdown:0.7.3")
+            implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.27.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
