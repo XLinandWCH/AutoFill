@@ -1,0 +1,83 @@
+<div
+        class="field ui-field-contain"
+        topic="12"
+        id="div12"
+        req="1"
+        data-role="fieldcontain"
+        type="4"
+>
+    <!-- 题目标题 -->
+    <div class="field-label">
+        <span class="req">*</span>
+        <div class="topicnumber">12.</div>
+        <div class="topichtml">
+            你是否知道这是一个多选题
+            <span class="qtypetip">【多选题】</span>
+        </div>
+    </div>
+
+    <!-- 选项区域 -->
+    <div class="ui-controlgroup column1">
+        <!-- 选项1：知道 -->
+        <div class="ui-checkbox">
+      <span class="jqcheckwrapper">
+        <input
+                type="checkbox"
+                value="1"
+                id="q12_1"
+                name="q12"
+                style="display:none;"
+        >
+        <a class="jqcheck" href="javascript:;"></a>
+      </span>
+            <div class="label" dit="%e7%9f%a5%e9%81%93" for="q12_1">知道</div>
+        </div>
+
+        <!-- 选项2：不知道 -->
+        <div class="ui-checkbox">
+      <span class="jqcheckwrapper">
+        <input
+                type="checkbox"
+                value="2"
+                id="q12_2"
+                name="q12"
+                style="display:none;"
+        >
+        <a class="jqcheck" href="javascript:;"></a>
+      </span>
+            <div class="label" dit="%e4%b8%8d%e7%9f%a5%e9%81%93" for="q12_2">不知道</div>
+        </div>
+
+        <!-- 选项3：其他（已选中状态） -->
+        <div class="ui-checkbox checked">
+      <span class="jqcheckwrapper">
+        <input
+                type="checkbox"
+                value="3"
+                id="q12_3"
+                name="q12"
+                rel="tqq12_3"
+                style="display:none;"
+        >
+        <a class="jqcheck jqchecked" href="javascript:;"></a>
+      </span>
+            <div class="label" dit="%e5%85%b6%e4%bb%96" for="q12_3" style="border-bottom:none;">
+                其他
+            </div>
+
+            <!-- 其他选项输入框 -->
+            <div class="ui-text" id="utq12_3" style="position: relative; margin-bottom: 10px; display: block;">
+                <input
+                        type="text"
+                        autocomplete="off"
+                        rel="q12_3"
+                        id="tqq12_3"
+                        class="OtherText"
+                >
+            </div>
+        </div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div class="errorMessage" style="display: none;"></div>
+</div>

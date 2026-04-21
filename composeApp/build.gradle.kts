@@ -47,9 +47,11 @@ kotlin {
             // Playwright 核心库
             implementation("com.microsoft.playwright:playwright:1.45.0")
 
-            // Markdown库
-            implementation("org.jetbrains:markdown:0.7.3")
-            implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.27.0")
+            // Markdown库核心渲染库
+            implementation("com.mikepenz:multiplatform-markdown-renderer:0.40.2")
+
+            //  Markdown 里有图片，建议配合 Coil3 使用（KMP 官方推荐的图片库）
+            implementation("com.mikepenz:multiplatform-markdown-renderer-coil3:0.40.2")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
