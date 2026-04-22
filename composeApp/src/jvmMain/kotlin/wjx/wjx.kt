@@ -34,30 +34,72 @@ suspend fun wjxCrawler(url: String): Map<String, Any>?{
         // 1. 获取所有题目的公共父容器（确保包含填空题的容器）
         val questionContainers = doc.select(".field.ui-field-contain")
 
-// 2. 遍历所有题目容器
+        // 2. 遍历所有题目容器提取选项文本
         val optionAll = questionContainers.map { question ->
             when {
-                // 使用 select 判断是否存在对应的选项标签
                 question.select(".ui-radio").isNotEmpty() ->
                     question.select(".ui-radio").map { it.text().trim() }
 
                 question.select(".ui-checkbox").isNotEmpty() ->
                     question.select(".ui-checkbox").map { it.text().trim() }
 
-                // 显式匹配填空题的输入框
-                question.select(".ui-input-text").isNotEmpty() ->
+                // 下拉框 (剔除值为 -2 的 "请选择")
+                question.select("option").isNotEmpty() ->
+                    question.select("option").filter { it.attr("value") != "-2" }.map { it.text().trim() }
+
+                // 排序题
+                question.select(".ui-li-static").isNotEmpty() ->
+                    question.select(".ui-li-static").map { it.text().trim() }
+
+                // 量表题 (小星星或数字)
+                question.select(".rate-off").isNotEmpty() ->
+                    question.select("li.td").map { it.text().trim() }
+
+                // 矩阵题 (获取行标题作为子问题)
+                question.select("tr.rowtitle").isNotEmpty() ->
+                    question.select("tr.rowtitle .itemTitleSpan").map { it.text().trim() }
+
+                // 滑动条题 (获取子问题)
+                question.select("tr.rowtitletr").isNotEmpty() ->
+                    question.select("tr.rowtitletr td.title span.itemTitleSpan").map { it.text().trim() }
+
+                // 填空题
+                question.select(".ui-input-text").isNotEmpty() || question.select("textarea").isNotEmpty() ->
                     emptyList()
 
-                question.select("option").isNotEmpty() ->
-                    question.select("option").map { it.text().trim() }
+                else -> emptyList() // 兜底
+            }
+        }
 
-                else -> emptyList() // 兜底返回空列表，确保 index 对齐
+        // 3. 提取选项中是否包含填空题 (.ui-text 或者 .OtherText)
+        val hasTextInputAll = questionContainers.map { question ->
+            when {
+                question.select(".ui-radio").isNotEmpty() ->
+                    question.select(".ui-radio").map { it.select(".ui-text").isNotEmpty() || it.select("input[type=text]").isNotEmpty() }
+
+                question.select(".ui-checkbox").isNotEmpty() ->
+                    question.select(".ui-checkbox").map { it.select(".ui-text").isNotEmpty() || it.select("input[type=text]").isNotEmpty() }
+
+                question.select(".ui-li-static").isNotEmpty() ->
+                    question.select(".ui-li-static").map { it.select(".ui-text").isNotEmpty() || it.select("input[type=text]").isNotEmpty() }
+
+                else -> emptyList()
             }
         }
 
         // 爬取所有题目的 type 属性
         val typeStrings = questionContainers.map { container ->
             container.attr("type")  // 获取 type 属性值
+        }
+
+        // 提取矩阵题的列标题
+        val matrixColsAll = questionContainers.map { question ->
+            if (question.select("table.matrix-rating").isNotEmpty()) {
+                // 通常矩阵题列标题在 thead th 中，剔除第一个空 th
+                question.select("thead th").map { it.text().trim() }.filter { it.isNotEmpty() }
+            } else {
+                emptyList()
+            }
         }
 
 
@@ -72,6 +114,8 @@ suspend fun wjxCrawler(url: String): Map<String, Any>?{
         surveyData["question"] = questions
         surveyData["option"] = optionAll
         surveyData["typeInts"] = typeInts
+        surveyData["hasTextInput"] = hasTextInputAll
+        surveyData["matrixCols"] = matrixColsAll
         surveyData["url"] = url
 
 
@@ -109,6 +153,7 @@ suspend fun wjxCrawler(url: String): Map<String, Any>?{
         surveyData["divx"] = 0
         surveyData["question"] = emptyList<String>()
         surveyData["option"] = emptyList<List<String>>()
+        surveyData["matrixCols"] = emptyList<List<String>>()
 
         return surveyData
 

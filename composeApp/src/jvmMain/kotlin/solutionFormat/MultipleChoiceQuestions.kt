@@ -1,10 +1,6 @@
 package SolutionFormat
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Card
@@ -40,7 +36,6 @@ fun MultipleChoiceQuestions(questionIndex: Int, optionIndex: Int) {
                 value = currentText,
                 onValueChange = {
                     AnswerDictionary.updateAnswer(questionIndex, optionIndex, it)
-                    AnswerDictionary.printDictionary()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,

@@ -28,6 +28,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 @Composable
 fun HomeContent(surveyData: MutableMap<String, Any>) {
@@ -37,11 +40,13 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
     val questions = surveyData["question"] as? List<String> ?:emptyList()
     val options = surveyData["option"] as? List<List<String>>?:emptyList()
     val typeInts = surveyData["typeInts"] as? List<Int> ?: emptyList()
+    val hasTextInputAll = surveyData["hasTextInput"] as? List<List<Boolean>> ?: emptyList()
+    val matrixColsAll = surveyData["matrixCols"] as? List<List<String>> ?: emptyList()
     val title = surveyData["title"] as? String ?: ""
     val url = surveyData["url"] as? String ?: ""
 
-    androidx.compose.runtime.LaunchedEffect(typeInts, options) {
-        AnswerDictionary.initialize(typeInts, options, url)
+    androidx.compose.runtime.LaunchedEffect(typeInts, options, hasTextInputAll, matrixColsAll) {
+        AnswerDictionary.initialize(typeInts, options, url, hasTextInputAll, matrixColsAll)
         // 同步问卷标题和链接到运行管理器
         SurveyRunManager.surveyTitle.value = title
         SurveyRunManager.surveyUrl.value = url
@@ -133,28 +138,13 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
                                     }
                                 } else {
                                     currentOption.forEachIndexed { optionIndex, option ->
-                                        Card(
-                                            modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(6.dp),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = Color(0xFF505050),  // 卡片背景色
-                                            ),
-                                            shape = RoundedCornerShape(2.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Text(
-                                                    text = option,
-                                                    fontWeight = FontWeight.W300,
-                                                    fontSize = 22.sp,
-                                                    color = Color.White,
-                                                    modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp).weight(1f)
-                                                )
-                                                HomeSolution(questionIndex = index, optionIndex = optionIndex, type = currentType)
-                                            }
-                                        }
+                                        OptionRow(
+                                            questionIndex = index,
+                                            optionIndex = optionIndex,
+                                            option = option,
+                                            currentType = currentType,
+                                            hasTextInput = hasTextInputAll.getOrNull(index)?.getOrNull(optionIndex) == true
+                                        )
                                     }
                                 }
 
@@ -171,6 +161,47 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
         }
 
     }
+}
 
+@Composable
+fun OptionRow(questionIndex: Int, optionIndex: Int, option: String, currentType: Int, hasTextInput: Boolean) {
+    var expanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF505050),
+        ),
+        shape = RoundedCornerShape(2.dp)
+    ) {
+        androidx.compose.foundation.layout.Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = option,
+                    fontWeight = FontWeight.W300,
+                    fontSize = 22.sp,
+                    color = if (hasTextInput) Color(0xFF2979FF) else Color.White,
+                    modifier = Modifier
+                        .padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
+                        .weight(1f)
+                        .then(
+                            if (hasTextInput) {
+                                Modifier.clickable { expanded = !expanded }
+                            } else {
+                                Modifier
+                            }
+                        )
+                )
+                HomeSolution(questionIndex = questionIndex, optionIndex = optionIndex, type = currentType)
+            }
+            if (expanded && hasTextInput) {
+                SolutionFormat.OptionTextInput(questionIndex, optionIndex)
+            }
+        }
+    }
 }
 
