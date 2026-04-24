@@ -41,16 +41,16 @@ object SurveyRunManager {
 
     // ─── 设置项（由 HomeSetting 读写） ──────────────────────────
     /** 并发线程数 */
-    val threadCount = mutableStateOf(1)
+    val threadCount = mutableStateOf(3)
 
     /** 目标填写总数 */
     val totalTarget = mutableStateOf(10)
 
     /** 是否开启反爬虫机制 */
-    val isAntiBotEnabled = mutableStateOf(false)
+    val isAntiBotEnabled = mutableStateOf(true)
 
     /** 是否开启无头模式（不显示浏览器窗口） */
-    val isHeadlessEnabled = mutableStateOf(false)
+    val isHeadlessEnabled = mutableStateOf(true)
 
     // ─── 统计计数 ──────────────────────────────────────────────
     /** 已完成数量（成功 + 失败） */

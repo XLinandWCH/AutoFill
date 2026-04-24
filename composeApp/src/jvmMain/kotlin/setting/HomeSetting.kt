@@ -50,7 +50,6 @@ fun HomeSetting() {
 
     var text_thread by remember { mutableStateOf(SurveyRunManager.threadCount.value.toString()) }
     var text_num by remember { mutableStateOf(SurveyRunManager.totalTarget.value.toString()) }
-    var isHeadlessMode by remember { mutableStateOf(false) } // 添加Switch状态
 
     CompositionLocalProvider(LocalTextSelectionColors provides customSelectionColors){
         SelectionContainer {
