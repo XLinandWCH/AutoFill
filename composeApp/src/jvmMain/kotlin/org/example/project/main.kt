@@ -10,6 +10,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
@@ -20,6 +21,7 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "AutoFill",
         state = WindowState(height = 640.dp, width = 960.dp),
+        icon = painterResource("drawables/AutoFill.png")
 
 
     ) {

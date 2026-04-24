@@ -77,6 +77,21 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "org.example.project"
             packageVersion = "1.0.0"
+
+            // --- 在这里配置图标 ---
+
+            linux {
+                iconFile.set(project.file("icons/AutoFill.png"))
+            }
+            windows {
+                iconFile.set(project.file("icons/AutoFill.ico"))
+                // 如果你想在 Windows 安装菜单里显示特定的图标，也可以在这里设置
+                menuGroup = "MyKMPApp"
+            }
+            macOS {
+                iconFile.set(project.file("icons/AutoFill.icns"))
+                bundleID = "com.example.project"
+            }
         }
     }
 }
