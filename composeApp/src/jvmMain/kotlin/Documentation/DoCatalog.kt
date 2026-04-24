@@ -21,7 +21,10 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun DoCatalog() {
+fun DoCatalog(
+    selectedDoc: DocType,
+    onDocChange: (DocType) -> Unit
+) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -46,8 +49,16 @@ fun DoCatalog() {
                 verticalAlignment = Alignment.CenterVertically
             ){
 
-                DocTextButton(text = "使用说明")
-                DocTextButton(text = "服务协议")
+                DocTextButton(
+                    text = "使用说明",
+                    isSelected = selectedDoc == DocType.USAGE_GUIDE,
+                    onClick = { onDocChange(DocType.USAGE_GUIDE) }
+                )
+                DocTextButton(
+                    text = "服务协议",
+                    isSelected = selectedDoc == DocType.SERVICE_AGREEMENT,
+                    onClick = { onDocChange(DocType.SERVICE_AGREEMENT) }
+                )
             }
         }
     }
@@ -57,13 +68,15 @@ fun DoCatalog() {
 @Composable
 fun DocTextButton(
     text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
 ){
 
     TextButton(
-        onClick = {   },
+        onClick = onClick,
         shape = RoundedCornerShape(2.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent,
+            containerColor = if (isSelected) Color(0xFF4B4A4A) else Color.Transparent,
             contentColor = Color.White,
         ),
         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)

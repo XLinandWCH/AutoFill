@@ -52,6 +52,9 @@ kotlin {
 
             //  Markdown 里有图片，建议配合 Coil3 使用（KMP 官方推荐的图片库）
             implementation("com.mikepenz:multiplatform-markdown-renderer-coil3:0.40.2")
+
+            // Material 3 适配库 (必须添加这个，否则找不到 markdownColor() 等方法)
+            implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.40.2")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
