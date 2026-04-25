@@ -1,4 +1,4 @@
-name: 自动打包发布 (全平台)
+name: 自动打包发布
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ jobs:
   build:
     strategy:
       matrix:
-        # 同时启动三台不同系统的虚拟机
+        # 同时启动三台不同系统的虚拟机进行打包
         os: [windows-latest, macos-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
@@ -25,6 +25,11 @@ jobs:
           java-version: '21'
           distribution: 'zulu'
 
+      - name: 赋予脚本执行权限
+        # 这一步解决了 Linux/Mac 下的 Permission denied 报错
+        if: runner.os != 'Windows'
+        run: chmod +x gradlew
+
       - name: 执行打包命令
         shell: bash
         run: |
@@ -39,13 +44,13 @@ jobs:
       - name: 发布到 Release
         uses: softprops/action-gh-release@v2
         with:
-          # 固定 Tag 和名称，不再引用 run_number
+          # 固定版本号，不再显示“第5版”等字样
           tag_name: "v1.0.0"
           name: "自动填充 v1.0.0"
-          body: "AutoFill 全平台正式发布版本。"
+          body: "AutoFill 正式发布版本。"
           draft: false
           prerelease: false
-          # 这样如果你多次手动运行，它会更新现有的 Release 而不是报错
+          # 如果多次运行，会自动覆盖更新同一个 Release 里的文件
           make_latest: true
           files: |
             composeApp/build/compose/binaries/main/msi/*.msi
