@@ -2,6 +2,11 @@ name: 自动打包发布
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (请填入新的版本号，例如 v1.0.1)'
+        required: true
+        default: 'v1.0.1'
 
 permissions:
   contents: write
@@ -12,7 +17,7 @@ jobs:
   # ==========================================
   build:
     strategy:
-      fail-fast: false # 某一个平台失败时，不取消其他平台的打包
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -49,9 +54,7 @@ jobs:
 
       - name: 执行打包命令
         env:
-          # 核心修复：强制分配足够的内存给 Gradle 守护进程，防止打包器(jpackage) OOM 崩溃
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8"
-        # 移除原先的 --no-daemon，让 setup-gradle 更好地接管环境
         run: ./gradlew :composeApp:${{ matrix.task }} --stacktrace
 
       - name: 暂存构建产物
@@ -59,28 +62,29 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_path }}
-          if-no-files-found: error # 如果没找到文件直接报错，方便排查
+          if-no-files-found: error
 
   # ==========================================
   # 阶段二：统一发布到 Release
   # ==========================================
   release:
-    needs: build # 必须等待 build 阶段全部成功后才执行
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: 下载所有构建产物
         uses: actions/download-artifact@v4
         with:
           path: release-artifacts
-          merge-multiple: true # 将三个平台的产物下载到同一个文件夹中
+          merge-multiple: true
 
       - name: 发布到 Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v1.0.0"
-          name: "自动填充 v1.0.0"
+          # 核心修改：使用动态输入的版本号替代写死的 v1.0.0
+          tag_name: ${{ github.event.inputs.version }}
+          name: "自动填充 ${{ github.event.inputs.version }}"
           body: |
-            ### AutoFill 全平台发布
+            ### 🚀 AutoFill 全平台发布
             - **Windows**: .msi 安装包
             - **macOS**: .dmg 镜像文件
             - **Linux**: .deb 安装包
@@ -90,7 +94,6 @@ jobs:
           prerelease: false
           make_latest: true
           fail_on_unmatched_files: true
-          # 统一将下载到根目录的所有安装包上传
           files: release-artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
