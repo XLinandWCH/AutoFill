@@ -26,7 +26,7 @@ jobs:
           distribution: 'zulu'
 
       - name: 赋予脚本执行权限
-        # 这一步解决了 Linux/Mac 下的 Permission denied 报错
+        # 解决了 Linux/Mac 下 ./gradlew 的权限问题
         if: runner.os != 'Windows'
         run: chmod +x gradlew
 
@@ -34,24 +34,32 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            ./gradlew :composeApp:packageMsi --no-configuration-cache
+            ./gradlew :composeApp:packageMsi --no-configuration-cache --no-daemon
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            ./gradlew :composeApp:packageDmg --no-configuration-cache
+            ./gradlew :composeApp:packageDmg --no-configuration-cache --no-daemon
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            ./gradlew :composeApp:packageDeb --no-configuration-cache
+            ./gradlew :composeApp:packageDeb --no-configuration-cache --no-daemon
           fi
 
       - name: 发布到 Release
         uses: softprops/action-gh-release@v2
         with:
-          # 固定版本号，不再显示“第5版”等字样
+          # 固定版本标签和名称
           tag_name: "v1.0.0"
           name: "自动填充 v1.0.0"
-          body: "AutoFill 正式发布版本。"
+          body: |
+            ### 🚀 AutoFill 全平台发布
+            - **Windows**: .msi 安装包
+            - **macOS**: .dmg 镜像文件
+            - **Linux**: .deb 安装包
+            
+            *构建时间: ${{ github.event.repository.updated_at }}*
           draft: false
           prerelease: false
-          # 如果多次运行，会自动覆盖更新同一个 Release 里的文件
+          # 设为 true 确保它始终是最新的 Release
           make_latest: true
+          # 关键：设置为 false，因为每台机器只能看到自己平台的产物，看不到其他平台的
+          fail_on_unmatched_files: false
           files: |
             composeApp/build/compose/binaries/main/msi/*.msi
             composeApp/build/compose/binaries/main/dmg/*.dmg
