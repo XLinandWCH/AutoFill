@@ -24,14 +24,17 @@ jobs:
             task: packageMsi
             artifact_name: windows-app
             artifact_path: composeApp/build/compose/binaries/main/msi/*.msi
+            release_name: AutoFill-${{ github.event.inputs.version }}-Windows-x64.msi
           - os: macos-latest
             task: packageDmg
             artifact_name: macos-app
             artifact_path: composeApp/build/compose/binaries/main/dmg/*.dmg
+            release_name: AutoFill-${{ github.event.inputs.version }}-macOS-x64.dmg
           - os: ubuntu-latest
             task: packageDeb
             artifact_name: linux-app
             artifact_path: composeApp/build/compose/binaries/main/deb/*.deb
+            release_name: AutoFill-${{ github.event.inputs.version }}-Ubuntu-x64.deb
 
     runs-on: ${{ matrix.os }}
 
@@ -57,11 +60,24 @@ jobs:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8"
         run: ./gradlew :composeApp:${{ matrix.task }} --stacktrace
 
+      - name: 提取并重命名安装包
+        shell: bash
+        run: |
+          mkdir -p release-pkg
+          mv ${{ matrix.artifact_path }} release-pkg/${{ matrix.release_name }}
+
+      - name: 【Windows专属】生成 Zip 便携版
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # 压缩生成的 App 目录为标准的 .zip 格式
+          Compress-Archive -Path composeApp/build/compose/binaries/main/app/* -DestinationPath release-pkg/AutoFill-${{ github.event.inputs.version }}-Windows-x64.zip
+
       - name: 暂存构建产物
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_path }}
+          path: release-pkg/*
           if-no-files-found: error
 
   # ==========================================
@@ -80,14 +96,15 @@ jobs:
       - name: 发布到 Release
         uses: softprops/action-gh-release@v2
         with:
-          # 核心修改：使用动态输入的版本号替代写死的 v1.0.0
           tag_name: ${{ github.event.inputs.version }}
-          name: "自动填充 ${{ github.event.inputs.version }}"
+          name: "AutoFill ${{ github.event.inputs.version }}"
           body: |
             ### 🚀 AutoFill 全平台发布
-            - **Windows**: .msi 安装包
-            - **macOS**: .dmg 镜像文件
-            - **Linux**: .deb 安装包
+            
+            #### 📥 下载指南
+            - **Windows 用户**：提供 `.msi` 安装包及 `.zip` 便携版。
+            - **macOS 用户**：下载 `.dmg` 文件安装。
+            - **Linux 用户**：下载 `.deb` 包安装。
             
             *构建时间: ${{ github.event.repository.updated_at }}*
           draft: false
