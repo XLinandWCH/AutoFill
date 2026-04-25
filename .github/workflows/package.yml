@@ -3,17 +3,32 @@ name: 自动打包发布
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
+  # ==========================================
+  # 阶段一：并行构建安装包
+  # ==========================================
   build:
     strategy:
+      fail-fast: false # 某一个平台失败时，不取消其他平台的打包
       matrix:
-        # 同时启动三台不同系统的虚拟机进行打包
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            task: packageMsi
+            artifact_name: windows-app
+            artifact_path: composeApp/build/compose/binaries/main/msi/*.msi
+          - os: macos-latest
+            task: packageDmg
+            artifact_name: macos-app
+            artifact_path: composeApp/build/compose/binaries/main/dmg/*.dmg
+          - os: ubuntu-latest
+            task: packageDeb
+            artifact_name: linux-app
+            artifact_path: composeApp/build/compose/binaries/main/deb/*.deb
 
     runs-on: ${{ matrix.os }}
-
-    permissions:
-      contents: write
 
     steps:
       - name: 检出代码
@@ -25,30 +40,47 @@ jobs:
           java-version: '21'
           distribution: 'zulu'
 
+      - name: 配置 Gradle 环境与缓存
+        uses: gradle/actions/setup-gradle@v3
+
       - name: 赋予脚本执行权限
-        # 解决了 Linux/Mac 下 ./gradlew 的权限问题
         if: runner.os != 'Windows'
         run: chmod +x gradlew
 
       - name: 执行打包命令
-        shell: bash
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            ./gradlew :composeApp:packageMsi --no-configuration-cache --no-daemon
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            ./gradlew :composeApp:packageDmg --no-configuration-cache --no-daemon
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            ./gradlew :composeApp:packageDeb --no-configuration-cache --no-daemon
-          fi
+        env:
+          # 核心修复：强制分配足够的内存给 Gradle 守护进程，防止打包器(jpackage) OOM 崩溃
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8"
+        # 移除原先的 --no-daemon，让 setup-gradle 更好地接管环境
+        run: ./gradlew :composeApp:${{ matrix.task }} --stacktrace
+
+      - name: 暂存构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error # 如果没找到文件直接报错，方便排查
+
+  # ==========================================
+  # 阶段二：统一发布到 Release
+  # ==========================================
+  release:
+    needs: build # 必须等待 build 阶段全部成功后才执行
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true # 将三个平台的产物下载到同一个文件夹中
 
       - name: 发布到 Release
         uses: softprops/action-gh-release@v2
         with:
-          # 固定版本标签和名称
           tag_name: "v1.0.0"
           name: "自动填充 v1.0.0"
           body: |
-            ### 🚀 AutoFill 全平台发布
+            ### AutoFill 全平台发布
             - **Windows**: .msi 安装包
             - **macOS**: .dmg 镜像文件
             - **Linux**: .deb 安装包
@@ -56,13 +88,9 @@ jobs:
             *构建时间: ${{ github.event.repository.updated_at }}*
           draft: false
           prerelease: false
-          # 设为 true 确保它始终是最新的 Release
           make_latest: true
-          # 关键：设置为 false，因为每台机器只能看到自己平台的产物，看不到其他平台的
-          fail_on_unmatched_files: false
-          files: |
-            composeApp/build/compose/binaries/main/msi/*.msi
-            composeApp/build/compose/binaries/main/dmg/*.dmg
-            composeApp/build/compose/binaries/main/deb/*.deb
+          fail_on_unmatched_files: true
+          # 统一将下载到根目录的所有安装包上传
+          files: release-artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
