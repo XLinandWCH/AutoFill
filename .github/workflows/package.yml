@@ -1,13 +1,17 @@
-name: 自动打包发布
+name: 自动打包发布 (全平台)
 
 on:
-  workflow_dispatch:   # ✅ 手动点击运行
+  workflow_dispatch:
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        # 定义三个运行环境
+        os: [windows-latest, macos-latest, ubuntu-latest]
 
-    # 增加权限声明，确保脚本有权创建 Release
+    runs-on: ${{ matrix.os }}
+
     permissions:
       contents: write
 
@@ -21,35 +25,27 @@ jobs:
           java-version: '21'
           distribution: 'zulu'
 
-      - name: Gradle 缓存
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-      - name: 执行打包命令
-        # 建议增加 --no-configuration-cache 避免 GitHub 环境下的序列化报错
-        run: ./gradlew :composeApp:packageMsi --no-configuration-cache
+      - name: 执行打包命令 (根据系统选择命令)
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            ./gradlew :composeApp:packageMsi --no-configuration-cache
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            # 注意：打包 DMG 记得之前说的版本号主版本号要 > 0
+            ./gradlew :composeApp:packageDmg --no-configuration-cache
+          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            ./gradlew :composeApp:packageDeb --no-configuration-cache
+          fi
 
       - name: 发布到 Release
         uses: softprops/action-gh-release@v2
         with:
-          # --- 核心修改点 ---
-          # 手动运行时没有 tag，我们强制指定一个 tag 名称
-          # 你也可以改成 "v${{ github.run_number }}" 让每次运行的 tag 都不一样
           tag_name: "v1.0.0-release"
-          name: "AutoFill v1.0.0 (Build ${{ github.run_number }})"
-          body: |
-            这是由 GitHub Actions 自动生成的安装包。
-            构建编号: ${{ github.run_number }}
-            提交分支: ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          # 如果 tag 已存在，则覆盖更新里面的文件
-          make_latest: true
+          name: "AutoFill v1.0.0"
+          # 关键：这里匹配所有平台生成的安装包路径
           files: |
             composeApp/build/compose/binaries/main/msi/*.msi
+            composeApp/build/compose/binaries/main/dmg/*.dmg
+            composeApp/build/compose/binaries/main/deb/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
