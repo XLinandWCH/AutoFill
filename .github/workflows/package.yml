@@ -7,7 +7,7 @@ jobs:
   build:
     strategy:
       matrix:
-        # 定义三个运行环境
+        # 同时启动三台不同系统的虚拟机
         os: [windows-latest, macos-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
@@ -25,13 +25,12 @@ jobs:
           java-version: '21'
           distribution: 'zulu'
 
-      - name: 执行打包命令 (根据系统选择命令)
+      - name: 执行打包命令
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ./gradlew :composeApp:packageMsi --no-configuration-cache
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            # 注意：打包 DMG 记得之前说的版本号主版本号要 > 0
             ./gradlew :composeApp:packageDmg --no-configuration-cache
           elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             ./gradlew :composeApp:packageDeb --no-configuration-cache
@@ -40,9 +39,14 @@ jobs:
       - name: 发布到 Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v1.0.0-release"
-          name: "AutoFill v1.0.0"
-          # 关键：这里匹配所有平台生成的安装包路径
+          # 固定 Tag 和名称，不再引用 run_number
+          tag_name: "v1.0.0"
+          name: "自动填充 v1.0.0"
+          body: "AutoFill 全平台正式发布版本。"
+          draft: false
+          prerelease: false
+          # 这样如果你多次手动运行，它会更新现有的 Release 而不是报错
+          make_latest: true
           files: |
             composeApp/build/compose/binaries/main/msi/*.msi
             composeApp/build/compose/binaries/main/dmg/*.dmg
