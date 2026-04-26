@@ -12,14 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.LocalTextSelectionColors
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,15 +31,9 @@ fun RunSetting() {
     val scope = rememberCoroutineScope()
     val state = SurveyRunManager.runState.value
     val title = SurveyRunManager.surveyTitle.value.ifBlank { "未加载问卷" }
-    val completed = SurveyRunManager.completedCount.value
     val total = SurveyRunManager.totalTarget.value
     val success = SurveyRunManager.successCount.get()
     val fail = SurveyRunManager.failCount.get()
-
-    val customSelectionColors = TextSelectionColors(
-        handleColor = Color.White,
-        backgroundColor = Color(0xC869EF79).copy(alpha = 0.15f)
-    )
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -69,40 +59,38 @@ fun RunSetting() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 左侧：标题 + 进度（可选中）
-                CompositionLocalProvider(LocalTextSelectionColors provides customSelectionColors) {
-                    SelectionContainer(modifier = Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "标题：",
-                                color = Color.White,
-                                fontWeight = FontWeight.W300,
-                                fontSize = 18.sp,
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = title,
-                                color = Color(0xFF82CFFF),
-                                fontWeight = FontWeight.W400,
-                                fontSize = 18.sp,
-                                textDecoration = TextDecoration.Underline,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text(
-                                text = "进度: $success/$total | 成功: $success | 失败: $fail",
-                                color = Color(0xFFAAFFAA),
-                                fontWeight = FontWeight.W300,
-                                fontSize = 15.sp,
-                            )
-                        }
-                    }
+                // 左侧：标题 + 进度
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "标题：",
+                        color = Color.White,
+                        fontWeight = FontWeight.W300,
+                        fontSize = 18.sp,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = title,
+                        color = Color(0xFF82CFFF),
+                        fontWeight = FontWeight.W400,
+                        fontSize = 18.sp,
+                        textDecoration = TextDecoration.Underline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "进度: $success/$total | 成功: $success | 失败: $fail",
+                        color = Color(0xFFAAFFAA),
+                        fontWeight = FontWeight.W300,
+                        fontSize = 15.sp,
+                    )
                 }
 
-                // 右侧：操作按钮（不在 SelectionContainer 内，确保可点击）
+                // 右侧：操作按钮
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     when (state) {
                         SurveyRunManager.RunState.IDLE -> {
@@ -115,24 +103,6 @@ fun RunSetting() {
                         }
 
                         SurveyRunManager.RunState.RUNNING -> {
-                            ActionButton(
-                                text = "全部暂停",
-                                color = Color(0xFFFFA726),
-                                onClick = { SurveyRunManager.pauseAll() }
-                            )
-                            ActionButton(
-                                text = "停止",
-                                color = Color(0xFFEF5350),
-                                onClick = { SurveyRunManager.stopAll() }
-                            )
-                        }
-
-                        SurveyRunManager.RunState.PAUSED -> {
-                            ActionButton(
-                                text = "恢复运行",
-                                color = Color(0xFF4CAF50),
-                                onClick = { SurveyRunManager.resumeAll() }
-                            )
                             ActionButton(
                                 text = "停止",
                                 color = Color(0xFFEF5350),
