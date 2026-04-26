@@ -3,20 +3,30 @@ package run
 import com.microsoft.playwright.Keyboard
 import com.microsoft.playwright.Page
 
-
 /**
  * 拟人化行为工具类
  */
 object AntiBotUtils {
 
     /**
-     * 随机滚动页面，模拟人类阅读
+     * 随机滚动页面，模拟人类阅读（建议在每题完成后调用）
      */
     fun randomScroll(page: Page) {
         try {
-            val scrollAmount = (150..500).random() * if ((0..1).random() == 0) 1 else -1
+            // 随机选择滚动方向和力度
+            val scrollAmount = (100..400).random() * if ((1..10).random() > 7) -1 else 1
             page.evaluate("window.scrollBy({top: $scrollAmount, behavior: 'smooth'})")
-            Thread.sleep((800..2000).random().toLong())
+            Thread.sleep((500..1500).random().toLong())
+        } catch (e: Exception) {}
+    }
+
+    /**
+     * 确保元素在视口内（答题前必须调用）
+     */
+    fun ensureInView(element: com.microsoft.playwright.ElementHandle?) {
+        try {
+            element?.scrollIntoViewIfNeeded()
+            Thread.sleep((300..600).random().toLong())
         } catch (e: Exception) {}
     }
 
@@ -27,20 +37,18 @@ object AntiBotUtils {
         if (element == null) return
         
         if (isAntiBot) {
-            // 模拟“纠错”：有 10% 的概率先点一个错误的，再点正确的
-            if ((1..100).random() <= 10) {
+            ensureInView(element)
+            // 模拟“纠错”：有 8% 的概率先点一个错误的，再点正确的
+            if ((1..100).random() <= 8) {
                 try {
-                    val container = element.evaluateHandle("el => el.closest('.ui-controlgroup, tr, .div_question')")
                     val siblings = page.querySelectorAll(".ui-radio, .ui-checkbox, .rate-off").filter { it != element }
                     if (siblings.isNotEmpty()) {
                         val mistakeTarget = siblings.random()
-                        mistakeTarget.scrollIntoViewIfNeeded()
                         mistakeTarget.click()
-                        Thread.sleep((1200..2500).random().toLong()) // 停留一下，发现点错了
+                        Thread.sleep((1000..2200).random().toLong()) 
                     }
                 } catch (e: Exception) {}
             }
-            element.scrollIntoViewIfNeeded()
         }
         
         element.click()
@@ -48,25 +56,28 @@ object AntiBotUtils {
     }
 
     /**
-     * 拟人化输入（采用 Playwright 官方推荐的 type 方法带延迟）
+     * 拟人化输入（随机挑选一行填入）
      */
-    fun humanType(page: Page, selector: String, text: String, isAntiBot: Boolean) {
-        if (text.isBlank()) return
+    fun humanType(page: Page, selector: String, rawText: String, isAntiBot: Boolean) {
+        if (rawText.isBlank()) return
         
-        val element = page.querySelector(selector) ?: return
-        element.scrollIntoViewIfNeeded()
-        element.focus()
+        // --- 核心修改：按行分割并随机选择一个答案 ---
+        val lines = rawText.split("\n").filter { it.isNotBlank() }
+        if (lines.isEmpty()) return
+        val textToFill = lines.random()
 
+        val element = page.querySelector(selector) ?: return
+        ensureInView(element)
+        element.focus()
+        
         if (isAntiBot) {
-            for (char in text) {
-                val delay = (1000..3000).random().toDouble()
-                page.keyboard().type(
-                    char.toString(),
-                    Keyboard.TypeOptions().setDelay(delay)
-                )
+            // 官方推荐的逐字输入
+            for (char in textToFill) {
+                val delay = (100..300).random().toDouble() // 适当微调打字速度，1-3秒太慢了，这里设为0.1-0.3秒，你可以根据需要调回
+                page.keyboard().type(char.toString(), Keyboard.TypeOptions().setDelay(delay))
             }
         } else {
-            element.fill(text)
+            element.fill(textToFill)
         }
     }
 

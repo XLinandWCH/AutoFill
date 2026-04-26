@@ -77,7 +77,7 @@ gradlew.bat :composeApp:run
 生成的文件位于：`composeApp/build/compose/binaries/main/app/`
 
 ### 方案二：打包文件运行 (普通用户)
-1. 前往 https://github.com/XLinandWCH/AutoFill/releases 页面下载最新的安装包或压缩包。
+1. 前往 [releases](https://github.com/XLinandWCH/AutoFill/releases) 页面下载最新的安装包或压缩包。
 2. 解压后双击运行 `AutoFill.exe` (Windows) 或 `AutoFill.app` (macOS)。
 
 ---

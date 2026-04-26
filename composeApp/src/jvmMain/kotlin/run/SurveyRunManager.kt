@@ -114,7 +114,17 @@ object SurveyRunManager {
                 try {
                     Playwright.create().use { pw ->
                         val browser = pw.chromium().launch(
-                            BrowserType.LaunchOptions().setHeadless(headless)
+                            BrowserType.LaunchOptions()
+                                .setHeadless(headless)
+                                .setArgs(listOf(
+                                    "--disable-extensions",
+                                    "--disable-component-update",
+                                    "--mute-audio",
+                                    "--no-sandbox",
+                                    "--disable-setuid-sandbox",
+                                    "--disable-gpu",
+                                    "--disable-dev-shm-usage"
+                                ))
                         )
 
                         while (!stopRequested.get()) {
@@ -201,7 +211,6 @@ object SurveyRunManager {
     private fun fillSurvey(page: com.microsoft.playwright.Page, taskId: Int, threadName: String, antiBot: Boolean) {
         val answers = AnswerDictionary.toPlainList()
         val types = AnswerDictionary.typeMap
-        val optionTexts = AnswerDictionary.optionTexts // 获取选项关联的文本输入
 
         for ((qIdx, answerList) in answers.withIndex()) {
             if (stopRequested.get()) break
@@ -210,23 +219,19 @@ object SurveyRunManager {
             val qNum = qIdx + 1
 
             try {
-                // --- 拟人化行为：随机滚动页面 ---
-                if (antiBot && (1..100).random() <= 30) { // 30% 概率在答题前滚动
-                    AntiBotUtils.randomScroll(page)
-                }
-
-                // 每题作答前的随机思考延时
+                // 每题作答前的基本延时
                 if (antiBot) AntiBotUtils.breatheDelay()
+
+                // 确保题目在视野内
+                val questionDiv = page.querySelector("#div$qNum")
+                if (antiBot) AntiBotUtils.ensureInView(questionDiv)
 
                 when (type) {
                     3 -> { // 单选题
                         val chosen = weightedRandomIndex(answerList)
                         val radios = page.querySelectorAll("#div$qNum .ui-radio")
                         if (chosen in radios.indices) {
-                            val target = radios[chosen]
-                            AntiBotUtils.humanClick(page, target, antiBot)
-                            
-                            // 检查该选项是否有填空（如“其他”）
+                            AntiBotUtils.humanClick(page, radios[chosen], antiBot)
                             handleChoiceTextInput(page, qIdx, chosen, qNum, antiBot)
                         }
                     }
@@ -251,12 +256,12 @@ object SurveyRunManager {
                         val chosen = weightedRandomIndex(answerList)
                         val selectEl = page.querySelector("#q$qNum")
                         if (selectEl != null) {
+                            if (antiBot) AntiBotUtils.ensureInView(selectEl)
                             val options = page.querySelectorAll("#q$qNum option").filter {
                                 it.getAttribute("value") != "-2"
                             }
                             if (chosen in options.indices) {
                                 selectEl.selectOption(options[chosen].getAttribute("value"))
-                                if (antiBot) AntiBotUtils.breatheDelay()
                             }
                         }
                     }
@@ -281,8 +286,8 @@ object SurveyRunManager {
                     }
 
                     1 -> { // 填空题
-                        val text = answerList.firstOrNull() ?: ""
-                        AntiBotUtils.humanType(page, "#q$qNum", text, antiBot)
+                        val rawText = answerList.firstOrNull() ?: ""
+                        AntiBotUtils.humanType(page, "#q$qNum", rawText, antiBot)
                     }
 
                     9 -> { // 滑动条
