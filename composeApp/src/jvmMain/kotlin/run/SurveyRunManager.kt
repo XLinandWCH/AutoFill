@@ -27,11 +27,12 @@ object SurveyRunManager {
 
     // ─── 任务日志条目 ───────────────────────────────────────────
     data class TaskLogEntry(
-        val id: Int,              // 任务序号
+        val id: Int,              // 内部自增 ID，用于显示
+        val taskId: Int,          // 业务任务编号
         val threadName: String,   // 执行线程名称
-        val status: String,       // 状态文字（成功、失败、运行中 等）
-        val taskProgress: String, // 进度文字，如 "3/10"
-        val detail: String = ""   // 详情/备注
+        var status: String,       // 状态文字
+        var taskProgress: String, // 进度文字
+        var detail: String = ""   // 详情
     )
 
     // ─── 状态 ──────────────────────────────────────────────────
@@ -85,7 +86,7 @@ object SurveyRunManager {
 
         val url = surveyUrl.value
         if (url.isBlank()) {
-            addLog(TaskLogEntry(1, "主线程", "失败", "0/0", "未加载问卷链接，请先抓取问卷"))
+            addLog(TaskLogEntry(1, 0, "主线程", "失败", "0/0", "未加载问卷链接"))
             return
         }
 
@@ -101,7 +102,7 @@ object SurveyRunManager {
         val threads = threadCount.value.coerceIn(1, 10)
         val target = totalTarget.value.coerceAtLeast(1)
         val headless = isHeadlessEnabled.value
-        val antiBot = isAntiBotEnabled.value // 缓存当前值
+        val antiBot = isAntiBotEnabled.value
         val taskCounter = AtomicInteger(0)
 
         executor = Executors.newFixedThreadPool(threads)
@@ -117,8 +118,20 @@ object SurveyRunManager {
                         )
 
                         while (!stopRequested.get()) {
-                            val taskId = taskCounter.incrementAndGet()
-                            if (taskId > target) break
+                            val currentTaskNum = taskCounter.incrementAndGet()
+                            if (currentTaskNum > target) break
+
+                            // ─── 立即添加“运行中”日志 ───
+                            val logIndex = addLog(
+                                TaskLogEntry(
+                                    id = 0, // addLog 会分配 id
+                                    taskId = currentTaskNum,
+                                    threadName = tName,
+                                    status = "运行中",
+                                    taskProgress = "$currentTaskNum/$target",
+                                    detail = "正在打开问卷..."
+                                )
+                            )
 
                             try {
                                 val context = browser.newContext()
@@ -126,32 +139,59 @@ object SurveyRunManager {
                                 page.navigate(url)
                                 page.waitForLoadState(LoadState.NETWORKIDLE)
 
+                                updateLog(logIndex, "运行中", "正在填写数据...")
+                                
                                 // 读取 AnswerDictionary 数据并填写
-                                fillSurvey(page, taskId, tName, antiBot)
+                                fillSurvey(page, currentTaskNum, tName, antiBot)
 
                                 context.close()
-                                recordSuccess(tName, "任务 $taskId 完成")
+                                val sCount = successCount.incrementAndGet()
+                                updateLog(logIndex, "成功", "任务完成", "$sCount/$target")
+                                completedCount.value = sCount + failCount.get()
                             } catch (e: Exception) {
-                                recordFailure(tName, "任务 $taskId 失败: ${e.message?.take(80)}")
+                                val fCount = failCount.incrementAndGet()
+                                updateLog(logIndex, "失败", "失败: ${e.message?.take(50)}", "${successCount.get()}/$target")
+                                completedCount.value = successCount.get() + fCount
                             }
 
-                            // 任务间休息
                             if (antiBot && !stopRequested.get()) {
                                 Thread.sleep((2000L..4000L).random())
                             }
                         }
-
                         browser.close()
                     }
                 } catch (e: Exception) {
-                    recordFailure(tName, "Playwright 初始化失败: ${e.message?.take(80)}")
+                    addLog(TaskLogEntry(0, 0, tName, "错误", "0/0", "初始化失败: ${e.message?.take(50)}"))
                 }
 
-                // 检查是否所有线程都完成了
                 if (successCount.get() + failCount.get() >= target || stopRequested.get()) {
                     runState.value = RunState.IDLE
                 }
             }
+        }
+    }
+
+    /**
+     * 添加日志并返回其在列表中的索引（用于后续更新）
+     */
+    private fun addLog(entry: TaskLogEntry): Int {
+        val newEntry = entry.copy(id = taskLogs.size + 1)
+        taskLogs.add(newEntry)
+        return taskLogs.size - 1
+    }
+
+    /**
+     * 更新指定索引的日志条目
+     */
+    private fun updateLog(index: Int, status: String, detail: String, progress: String? = null) {
+        if (index in taskLogs.indices) {
+            val old = taskLogs[index]
+            // 通过重新赋值触发 Compose 重绘
+            taskLogs[index] = old.copy(
+                status = status,
+                detail = detail,
+                taskProgress = progress ?: old.taskProgress
+            )
         }
     }
 
@@ -308,48 +348,4 @@ object SurveyRunManager {
     // 保留兼容性
     fun pauseAll() {}
     fun resumeAll() {}
-
-    // ─── 工具方法（供执行线程调用） ─────────────────────────────
-
-    /**
-     * 添加一条任务日志
-     */
-    fun addLog(entry: TaskLogEntry) {
-        taskLogs.add(entry)
-        completedCount.value = successCount.get() + failCount.get()
-    }
-
-    /**
-     * 记录一次成功
-     */
-    fun recordSuccess(threadName: String, detail: String = "") {
-        val count = successCount.incrementAndGet()
-        val total = totalTarget.value
-        addLog(
-            TaskLogEntry(
-                id = taskLogs.size + 1,
-                threadName = threadName,
-                status = "成功",
-                taskProgress = "$count/$total",
-                detail = detail
-            )
-        )
-    }
-
-    /**
-     * 记录一次失败
-     */
-    fun recordFailure(threadName: String, detail: String = "") {
-        failCount.incrementAndGet()
-        val total = totalTarget.value
-        addLog(
-            TaskLogEntry(
-                id = taskLogs.size + 1,
-                threadName = threadName,
-                status = "失败",
-                taskProgress = "${successCount.get()}/$total",
-                detail = detail
-            )
-        )
-    }
 }
