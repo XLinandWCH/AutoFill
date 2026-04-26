@@ -18,6 +18,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Switch
@@ -51,6 +53,11 @@ fun HomeSetting() {
     var text_thread by remember { mutableStateOf(SurveyRunManager.threadCount.value.toString()) }
     var text_num by remember { mutableStateOf(SurveyRunManager.totalTarget.value.toString()) }
 
+    // 下拉框状态定义
+    val options = listOf("选项一", "选项二", "选项三")
+    var expanded by remember { mutableStateOf(false) }
+    var selectedText by remember { mutableStateOf(options[0]) }
+
     CompositionLocalProvider(LocalTextSelectionColors provides customSelectionColors){
         SelectionContainer {
 
@@ -64,6 +71,19 @@ fun HomeSetting() {
                     ),
                     shape = RoundedCornerShape(6.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "浏览器内核:",
+                            color = Color.White,
+                            fontWeight = FontWeight.W300,
+                            fontSize = 20.sp
+                        )
+
+                    }
+
 
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(12.dp)

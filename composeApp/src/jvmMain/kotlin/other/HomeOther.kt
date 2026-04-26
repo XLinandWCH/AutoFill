@@ -5,9 +5,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
@@ -43,6 +46,8 @@ fun HomeOther(
                     style = MaterialTheme.typography.h6,
                     color = Color.White,
                 )
+                var fixStatus by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+
                 Column {
 
                     OtherButton("保存") {
@@ -54,10 +59,21 @@ fun HomeOther(
                         onDismiss()
                     }
 
-                    OtherButton("检查更新") {
-                        checkForUpdates()
+                    OtherButton("环境修复 (打不开浏览器点这个)") {
+                        fixEnvironment { status ->
+                            fixStatus = status
+                        }
                     }
 
+                }
+
+                if (fixStatus.isNotEmpty()) {
+                    Text(
+                        text = fixStatus,
+                        color = Color(0xFF2BAC3B),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
 
 
