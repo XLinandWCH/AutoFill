@@ -201,6 +201,7 @@ object SurveyRunManager {
     private fun fillSurvey(page: com.microsoft.playwright.Page, taskId: Int, threadName: String, antiBot: Boolean) {
         val answers = AnswerDictionary.toPlainList()
         val types = AnswerDictionary.typeMap
+        val optionTexts = AnswerDictionary.optionTexts // 获取选项关联的文本输入
 
         for ((qIdx, answerList) in answers.withIndex()) {
             if (stopRequested.get()) break
@@ -209,17 +210,24 @@ object SurveyRunManager {
             val qNum = qIdx + 1
 
             try {
-                // 每题作答前的随机思考延时（反爬核心）
-                if (antiBot) {
-                    Thread.sleep((800L..2000L).random())
+                // --- 拟人化行为：随机滚动页面 ---
+                if (antiBot && (1..100).random() <= 30) { // 30% 概率在答题前滚动
+                    AntiBotUtils.randomScroll(page)
                 }
+
+                // 每题作答前的随机思考延时
+                if (antiBot) AntiBotUtils.breatheDelay()
 
                 when (type) {
                     3 -> { // 单选题
                         val chosen = weightedRandomIndex(answerList)
                         val radios = page.querySelectorAll("#div$qNum .ui-radio")
                         if (chosen in radios.indices) {
-                            radios[chosen].click()
+                            val target = radios[chosen]
+                            AntiBotUtils.humanClick(page, target, antiBot)
+                            
+                            // 检查该选项是否有填空（如“其他”）
+                            handleChoiceTextInput(page, qIdx, chosen, qNum, antiBot)
                         }
                     }
 
@@ -228,14 +236,14 @@ object SurveyRunManager {
                         for ((i, cb) in checkboxes.withIndex()) {
                             val prob = answerList.getOrNull(i)?.toIntOrNull() ?: 50
                             if ((1..100).random() <= prob) {
-                                cb.click()
-                                if (antiBot) Thread.sleep((100..300).random().toLong())
+                                AntiBotUtils.humanClick(page, cb, antiBot)
+                                handleChoiceTextInput(page, qIdx, i, qNum, antiBot)
                             }
                         }
                         // 确保选中
                         val anyChecked = page.querySelectorAll("#div$qNum .jqcheck.checkon").isNotEmpty()
                         if (!anyChecked && checkboxes.isNotEmpty()) {
-                            checkboxes[0].click()
+                            AntiBotUtils.humanClick(page, checkboxes[0], antiBot)
                         }
                     }
 
@@ -248,6 +256,7 @@ object SurveyRunManager {
                             }
                             if (chosen in options.indices) {
                                 selectEl.selectOption(options[chosen].getAttribute("value"))
+                                if (antiBot) AntiBotUtils.breatheDelay()
                             }
                         }
                     }
@@ -256,7 +265,7 @@ object SurveyRunManager {
                         val chosen = weightedRandomIndex(answerList)
                         val rateButtons = page.querySelectorAll("#div$qNum .rate-off")
                         if (chosen in rateButtons.indices) {
-                            rateButtons[chosen].click()
+                            AntiBotUtils.humanClick(page, rateButtons[chosen], antiBot)
                         }
                     }
 
@@ -266,23 +275,21 @@ object SurveyRunManager {
                             val chosen = weightedRandomIndex(probs.map { it.toString() })
                             val cells = page.querySelectorAll("#div$qNum tr[rowindex='$rowIdx'] .rate-off")
                             if (chosen in cells.indices) {
-                                cells[chosen].click()
-                                if (antiBot) Thread.sleep((200..500).random().toLong())
+                                AntiBotUtils.humanClick(page, cells[chosen], antiBot)
                             }
                         }
                     }
 
                     1 -> { // 填空题
-                        val text = answerList.joinToString(" ")
-                        page.fill("#q${qNum}", text)
+                        val text = answerList.firstOrNull() ?: ""
+                        AntiBotUtils.humanType(page, "#q$qNum", text, antiBot)
                     }
 
                     9 -> { // 滑动条
                         for ((rowIdx, value) in answerList.withIndex()) {
                             val selector = "#q${qNum}_$rowIdx"
-                            page.fill(selector, value)
+                            AntiBotUtils.humanType(page, selector, value, antiBot)
                             page.querySelector(selector)?.dispatchEvent("change")
-                            if (antiBot) Thread.sleep((200..400).random().toLong())
                         }
                     }
 
@@ -293,8 +300,7 @@ object SurveyRunManager {
                         for (i in indices) {
                             val items = page.querySelectorAll("#div$qNum .ui-li-static")
                             if (i in items.indices) {
-                                items[i].click()
-                                if (antiBot) Thread.sleep((300..600).random().toLong())
+                                AntiBotUtils.humanClick(page, items[i], antiBot)
                             }
                         }
                     }
@@ -305,10 +311,37 @@ object SurveyRunManager {
         }
 
         // 提交
-        if (antiBot) Thread.sleep((1000..2000).random().toLong())
+        if (antiBot) AntiBotUtils.breatheDelay()
         val submitBtn = page.querySelector("#ctlNext")
-        submitBtn?.click()
+        AntiBotUtils.humanClick(page, submitBtn, antiBot)
         Thread.sleep(2000)
+    }
+
+    /**
+     * 处理选项内的填空题（如：其他_______）
+     */
+    private fun handleChoiceTextInput(page: com.microsoft.playwright.Page, qIdx: Int, optIdx: Int, qNum: Int, antiBot: Boolean) {
+        val text = AnswerDictionary.optionTexts.getOrNull(qIdx)?.getOrNull(optIdx) ?: ""
+        if (text.isNotBlank()) {
+            // WJX 常见的选项内填空 ID 格式：t_qX_Y 或在 label 同级下的 input
+            val selector = "#t_q${qNum}_${optIdx + 1}"
+            if (page.querySelector(selector) != null) {
+                AntiBotUtils.humanType(page, selector, text, antiBot)
+            } else {
+                // 兜底尝试查找该题目下的所有文本框
+                val inputs = page.querySelectorAll("#div$qNum input[type=text]")
+                if (inputs.isNotEmpty()) {
+                    // 通常选中的选项对应的输入框是可见的或者在它附近
+                    for (input in inputs) {
+                        if (input.isVisible) {
+                            val id = input.getAttribute("id") ?: ""
+                            AntiBotUtils.humanType(page, "#$id", text, antiBot)
+                            break
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
