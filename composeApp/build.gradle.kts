@@ -83,11 +83,13 @@ compose.desktop {
 
             linux {
                 iconFile.set(project.file("../icons/AutoFill.png"))
+                shortcut = true // 添加快捷方式
             }
             windows {
                 iconFile.set(project.file("../icons/AutoFill.ico"))
                 // 如果你想在 Windows 安装菜单里显示特定的图标，也可以在这里设置
                 menuGroup = "MyKMPApp"
+                shortcut = true // 添加快捷方式
             }
             macOS {
                 iconFile.set(project.file("../icons/AutoFill.icns"))

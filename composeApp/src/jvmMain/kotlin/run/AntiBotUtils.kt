@@ -11,13 +11,14 @@ object AntiBotUtils {
     /**
      * 随机滚动页面，模拟人类阅读（建议在每题完成后调用）
      */
-    fun randomScroll(page: Page) {
-        try {
-            // 随机选择滚动方向和力度
-            val scrollAmount = (100..400).random() * if ((1..10).random() > 7) -1 else 1
+    fun randomScroll(page: Page): String {
+        return try {
+            val isUp = (1..10).random() > 8 // 20% 概率向上
+            val scrollAmount = (150..400).random() * if (isUp) -1 else 1
             page.evaluate("window.scrollBy({top: $scrollAmount, behavior: 'smooth'})")
-            Thread.sleep((500..1500).random().toLong())
-        } catch (e: Exception) {}
+            Thread.sleep((600..1200).random().toLong())
+            if (isUp) "【浏览】随机向上翻页" else "【浏览】随机向下翻页"
+        } catch (e: Exception) { "【浏览】页面滚动异常" }
     }
 
     /**
@@ -31,10 +32,11 @@ object AntiBotUtils {
     }
 
     /**
-     * 拟人化点击（支持纠错逻辑）
+     * 拟人化点击（返回点击描述，包括是否触发了纠错）
      */
-    fun humanClick(page: Page, element: com.microsoft.playwright.ElementHandle?, isAntiBot: Boolean) {
-        if (element == null) return
+    fun humanClick(page: Page, element: com.microsoft.playwright.ElementHandle?, isAntiBot: Boolean): String {
+        if (element == null) return "未找到选项"
+        var actionDetail = "点击选中"
         
         if (isAntiBot) {
             ensureInView(element)
@@ -45,6 +47,7 @@ object AntiBotUtils {
                     if (siblings.isNotEmpty()) {
                         val mistakeTarget = siblings.random()
                         mistakeTarget.click()
+                        actionDetail = "【纠错】先错选了其他项，正在重选..."
                         Thread.sleep((1000..2200).random().toLong()) 
                     }
                 } catch (e: Exception) {}
@@ -53,38 +56,35 @@ object AntiBotUtils {
         
         element.click()
         if (isAntiBot) breatheDelay()
+        return actionDetail
     }
 
     /**
-     * 拟人化输入（随机挑选一行填入）
+     * 拟人化输入
      */
-    fun humanType(page: Page, selector: String, rawText: String, isAntiBot: Boolean) {
-        if (rawText.isBlank()) return
+    fun humanType(page: Page, selector: String, rawText: String, isAntiBot: Boolean): String {
+        if (rawText.isBlank()) return "跳过空文本"
         
-        // --- 核心修改：按行分割并随机选择一个答案 ---
         val lines = rawText.split("\n").filter { it.isNotBlank() }
-        if (lines.isEmpty()) return
+        if (lines.isEmpty()) return "无效文本池"
         val textToFill = lines.random()
 
-        val element = page.querySelector(selector) ?: return
+        val element = page.querySelector(selector) ?: return "找不到输入框"
         ensureInView(element)
         element.focus()
         
         if (isAntiBot) {
-            // 官方推荐的逐字输入
             for (char in textToFill) {
-                val delay = (100..300).random().toDouble() // 适当微调打字速度，1-3秒太慢了，这里设为0.1-0.3秒，你可以根据需要调回
+                val delay = (100..300).random().toDouble()
                 page.keyboard().type(char.toString(), Keyboard.TypeOptions().setDelay(delay))
             }
         } else {
             element.fill(textToFill)
         }
+        return "填写内容: \"$textToFill\""
     }
 
-    /**
-     * 选项间的呼吸等待 (1.0s ~ 3.5s)
-     */
     fun breatheDelay() {
-        Thread.sleep((1000L..3500L).random())
+        Thread.sleep((1000L..3000L).random())
     }
 }

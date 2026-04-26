@@ -149,10 +149,10 @@ object SurveyRunManager {
                                 page.navigate(url)
                                 page.waitForLoadState(LoadState.NETWORKIDLE)
 
-                                updateLog(logIndex, "运行中", "正在填写数据...")
+                                updateLog(logIndex, "运行中", "正在初始化页面...")
                                 
                                 // 读取 AnswerDictionary 数据并填写
-                                fillSurvey(page, currentTaskNum, tName, antiBot)
+                                fillSurvey(page, currentTaskNum, tName, antiBot, logIndex)
 
                                 context.close()
                                 val sCount = successCount.incrementAndGet()
@@ -193,7 +193,7 @@ object SurveyRunManager {
     /**
      * 更新指定索引的日志条目
      */
-    private fun updateLog(index: Int, status: String, detail: String, progress: String? = null) {
+    fun updateLog(index: Int, status: String, detail: String, progress: String? = null) {
         if (index in taskLogs.indices) {
             val old = taskLogs[index]
             // 通过重新赋值触发 Compose 重绘
@@ -208,19 +208,25 @@ object SurveyRunManager {
     /**
      * 使用 Playwright Page 自动填写问卷
      */
-    private fun fillSurvey(page: com.microsoft.playwright.Page, taskId: Int, threadName: String, antiBot: Boolean) {
+    private fun fillSurvey(page: com.microsoft.playwright.Page, taskId: Int, threadName: String, antiBot: Boolean, logIndex: Int) {
         val answers = AnswerDictionary.toPlainList()
         val types = AnswerDictionary.typeMap
+        val target = totalTarget.value
 
         for ((qIdx, answerList) in answers.withIndex()) {
             if (stopRequested.get()) break
             
             val type = types[qIdx] ?: 3
             val qNum = qIdx + 1
+            val prefix = "【第${qNum}题】"
 
             try {
                 // 每题作答前的基本延时
-                if (antiBot) AntiBotUtils.breatheDelay()
+                if (antiBot) {
+                    val scrollDetail = AntiBotUtils.randomScroll(page)
+                    updateLog(logIndex, "运行中", scrollDetail, "$taskId/$target")
+                    AntiBotUtils.breatheDelay()
+                }
 
                 // 确保题目在视野内
                 val questionDiv = page.querySelector("#div$qNum")
@@ -231,8 +237,9 @@ object SurveyRunManager {
                         val chosen = weightedRandomIndex(answerList)
                         val radios = page.querySelectorAll("#div$qNum .ui-radio")
                         if (chosen in radios.indices) {
-                            AntiBotUtils.humanClick(page, radios[chosen], antiBot)
-                            handleChoiceTextInput(page, qIdx, chosen, qNum, antiBot)
+                            val act = AntiBotUtils.humanClick(page, radios[chosen], antiBot)
+                            updateLog(logIndex, "运行中", "$prefix $act", "$taskId/$target")
+                            handleChoiceTextInput(page, qIdx, chosen, qNum, antiBot, logIndex)
                         }
                     }
 
@@ -241,14 +248,10 @@ object SurveyRunManager {
                         for ((i, cb) in checkboxes.withIndex()) {
                             val prob = answerList.getOrNull(i)?.toIntOrNull() ?: 50
                             if ((1..100).random() <= prob) {
-                                AntiBotUtils.humanClick(page, cb, antiBot)
-                                handleChoiceTextInput(page, qIdx, i, qNum, antiBot)
+                                val act = AntiBotUtils.humanClick(page, cb, antiBot)
+                                updateLog(logIndex, "运行中", "$prefix $act", "$taskId/$target")
+                                handleChoiceTextInput(page, qIdx, i, qNum, antiBot, logIndex)
                             }
-                        }
-                        // 确保选中
-                        val anyChecked = page.querySelectorAll("#div$qNum .jqcheck.checkon").isNotEmpty()
-                        if (!anyChecked && checkboxes.isNotEmpty()) {
-                            AntiBotUtils.humanClick(page, checkboxes[0], antiBot)
                         }
                     }
 
@@ -262,6 +265,7 @@ object SurveyRunManager {
                             }
                             if (chosen in options.indices) {
                                 selectEl.selectOption(options[chosen].getAttribute("value"))
+                                updateLog(logIndex, "运行中", "$prefix 选中下拉项", "$taskId/$target")
                             }
                         }
                     }
@@ -270,7 +274,8 @@ object SurveyRunManager {
                         val chosen = weightedRandomIndex(answerList)
                         val rateButtons = page.querySelectorAll("#div$qNum .rate-off")
                         if (chosen in rateButtons.indices) {
-                            AntiBotUtils.humanClick(page, rateButtons[chosen], antiBot)
+                            val act = AntiBotUtils.humanClick(page, rateButtons[chosen], antiBot)
+                            updateLog(logIndex, "运行中", "$prefix $act", "$taskId/$target")
                         }
                     }
 
@@ -280,20 +285,23 @@ object SurveyRunManager {
                             val chosen = weightedRandomIndex(probs.map { it.toString() })
                             val cells = page.querySelectorAll("#div$qNum tr[rowindex='$rowIdx'] .rate-off")
                             if (chosen in cells.indices) {
-                                AntiBotUtils.humanClick(page, cells[chosen], antiBot)
+                                val act = AntiBotUtils.humanClick(page, cells[chosen], antiBot)
+                                updateLog(logIndex, "运行中", "$prefix[行${rowIdx+1}] $act", "$taskId/$target")
                             }
                         }
                     }
 
                     1 -> { // 填空题
                         val rawText = answerList.firstOrNull() ?: ""
-                        AntiBotUtils.humanType(page, "#q$qNum", rawText, antiBot)
+                        val act = AntiBotUtils.humanType(page, "#q$qNum", rawText, antiBot)
+                        updateLog(logIndex, "运行中", "$prefix $act", "$taskId/$target")
                     }
 
                     9 -> { // 滑动条
                         for ((rowIdx, value) in answerList.withIndex()) {
                             val selector = "#q${qNum}_$rowIdx"
-                            AntiBotUtils.humanType(page, selector, value, antiBot)
+                            val act = AntiBotUtils.humanType(page, selector, value, antiBot)
+                            updateLog(logIndex, "运行中", "$prefix[项${rowIdx+1}] $act", "$taskId/$target")
                             page.querySelector(selector)?.dispatchEvent("change")
                         }
                     }
@@ -305,11 +313,19 @@ object SurveyRunManager {
                         for (i in indices) {
                             val items = page.querySelectorAll("#div$qNum .ui-li-static")
                             if (i in items.indices) {
-                                AntiBotUtils.humanClick(page, items[i], antiBot)
+                                val act = AntiBotUtils.humanClick(page, items[i], antiBot)
+                                updateLog(logIndex, "运行中", "$prefix 排序点击", "$taskId/$target")
                             }
                         }
                     }
                 }
+
+                // 每题做完后随机滚动
+                if (antiBot && (1..100).random() <= 25) {
+                    val scrollDetail = AntiBotUtils.randomScroll(page)
+                    updateLog(logIndex, "运行中", scrollDetail, "$taskId/$target")
+                }
+
             } catch (e: Exception) {
                 println("[$threadName] 题目 $qNum 填写异常: ${e.message}")
             }

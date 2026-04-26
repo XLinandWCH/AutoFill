@@ -11,7 +11,13 @@ object AnswerDictionary {
     val typeMap = mutableMapOf<Int, Int>() 
     val hasTextInputMap = mutableMapOf<Int, List<Boolean>>()
     val matrixColsMap = mutableMapOf<Int, List<String>>()
-    var currentUrl: String = ""
+    private var pendingAnswers: List<List<String>>? = null
+    private var pendingOptionTexts: List<List<String>>? = null
+
+    fun setPendingData(ans: List<List<String>>, texts: List<List<String>>) {
+        pendingAnswers = ans
+        pendingOptionTexts = texts
+    }
 
     fun initialize(typeInts: List<Int>, optionsList: List<List<String>>, url: String = "", hasTextInputList: List<List<Boolean>> = emptyList(), matrixColsList: List<List<String>> = emptyList()) {
         if (answers.isEmpty() || currentUrl != url || answers.size != typeInts.size) {
@@ -49,7 +55,31 @@ object AnswerDictionary {
                 answers.add(list)
                 optionTexts.add(textList)
             }
+
+            // 检查是否有等待应用的数据
+            checkPending()
         }
+    }
+
+    private fun checkPending() {
+        val ans = pendingAnswers ?: return
+        val texts = pendingOptionTexts ?: return
+        
+        ans.forEachIndexed { qIdx, qAnswers ->
+            if (qIdx in answers.indices) {
+                answers[qIdx].clear()
+                answers[qIdx].addAll(qAnswers)
+            }
+        }
+        texts.forEachIndexed { qIdx, qTexts ->
+            if (qIdx in optionTexts.indices) {
+                optionTexts[qIdx].clear()
+                optionTexts[qIdx].addAll(qTexts)
+            }
+        }
+        
+        pendingAnswers = null
+        pendingOptionTexts = null
     }
 
     fun updateAnswer(questionIndex: Int, optionIndex: Int, value: String, isTextInput: Boolean = false) {

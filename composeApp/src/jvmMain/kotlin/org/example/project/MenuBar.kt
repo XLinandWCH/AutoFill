@@ -14,6 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,9 +26,13 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import other.HomeOther
 
 @Composable
 fun MenuBar(onNavigate: (String) -> Unit){
+
+    var showHomeOther by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxWidth().height(45.dp).background(color = Color(0xFF343434))
     ) {
@@ -51,7 +59,7 @@ fun MenuBar(onNavigate: (String) -> Unit){
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Button(
-                    onClick = { /* 收起功能 */ },
+                    onClick = { showHomeOther = true },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.Transparent,
                         contentColor = Color.White
@@ -66,6 +74,15 @@ fun MenuBar(onNavigate: (String) -> Unit){
             }
         }
     }
+
+    // ✅ 在 Composable 作用域内调用 HomeOther
+    if (showHomeOther) {
+        HomeOther(
+            onDismiss = { showHomeOther = false },
+
+        )
+    }
+
 }
 
 @Composable

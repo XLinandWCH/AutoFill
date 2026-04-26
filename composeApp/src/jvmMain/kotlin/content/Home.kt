@@ -14,21 +14,31 @@ object GlobalData {
     val surveyData = mutableStateOf<Map<String, Any>?>(null)
 }
 
+/**
+ * 搜索触发器，用于跨组件调用搜索逻辑
+ */
+object SearchTrigger {
+    var onSearch: ((String) -> Unit)? = null
+}
+
 @Composable
 fun Home(){
     val scope = rememberCoroutineScope()
     // 引用全局数据
     val surveyData = GlobalData.surveyData
 
+    // 将搜索方法注册到触发器
+    SearchTrigger.onSearch = { url ->
+        scope.launch {
+            val data = wjxCrawler(url)
+            surveyData.value = data
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
             HomeSearch(onSearch = { url ->
-                scope.launch {
-                    // 调用抓取函数，获取字典
-                    val data = wjxCrawler(url)
-                    // 更新状态
-                    surveyData.value = data
-                }
+                SearchTrigger.onSearch?.invoke(url)
             })
 
             // 将获取到的字典传递给 HomeContent
