@@ -127,6 +127,7 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
                                 val currentType = typeInts.getOrNull(index) ?: 3
 
                                 if (currentType == 1) {
+                                    // 填空题
                                     Card(
                                         modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(6.dp),
                                         colors = CardDefaults.cardColors(
@@ -136,7 +137,22 @@ fun HomeContent(surveyData: MutableMap<String, Any>) {
                                     ) {
                                         HomeSolution(questionIndex = index, optionIndex = 0, type = currentType)
                                     }
+                                } else if (currentType == 6) {
+                                    // 矩阵题：整体渲染为表格
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(6.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = Color(0xFF505050),
+                                        ),
+                                        shape = RoundedCornerShape(2.dp)
+                                    ) {
+                                        SolutionFormat.MatrixQuestionsTable(
+                                            questionIndex = index,
+                                            rowOptions = currentOption
+                                        )
+                                    }
                                 } else {
+                                    // 其他题型：逐选项渲染
                                     currentOption.forEachIndexed { optionIndex, option ->
                                         OptionRow(
                                             questionIndex = index,

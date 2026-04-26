@@ -9,9 +9,9 @@ plugins {
 
 repositories {
     // 阿里云镜像仓库
-//    maven { url = uri("https://maven.aliyun.com/repository/public/") }
-//    maven { url = uri("https://maven.aliyun.com/repository/central/") }
-//    maven { url = uri("https://maven.aliyun.com/repository/google/") }
+    maven { url = uri("https://maven.aliyun.com/repository/public/") }
+    maven { url = uri("https://maven.aliyun.com/repository/central/") }
+    maven { url = uri("https://maven.aliyun.com/repository/google/") }
 
     // 保留官方仓库作为后备
     mavenCentral()
@@ -74,9 +74,10 @@ compose.desktop {
         mainClass = "org.example.project.MainKt"
 
         nativeDistributions {
+            // 在这里加上 TargetFormat.Zip
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.example.project"
-            packageVersion = "1.0.0"
+            packageName = "AutoFill"
+            packageVersion = "1.0.2"
 
             // --- 在这里配置图标 ---
 

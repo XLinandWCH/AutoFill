@@ -45,36 +45,35 @@ fun RunSetting() {
         backgroundColor = Color(0xC869EF79).copy(alpha = 0.15f)
     )
 
-    CompositionLocalProvider(LocalTextSelectionColors provides customSelectionColors) {
-        SelectionContainer {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF343434)
-                ),
-                shape = RoundedCornerShape(0.dp)
-            ) {
-                // 顶部分割线
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(Color(0xFF4B4A4A))
-                )
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF343434)
+        ),
+        shape = RoundedCornerShape(0.dp)
+    ) {
+        // 顶部分割线
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Color(0xFF4B4A4A))
+        )
 
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // 左侧：标题 + 进度
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 左侧：标题 + 进度（可选中）
+                CompositionLocalProvider(LocalTextSelectionColors provides customSelectionColors) {
+                    SelectionContainer(modifier = Modifier.weight(1f)) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = "标题：",
@@ -91,7 +90,6 @@ fun RunSetting() {
                                 textDecoration = TextDecoration.Underline,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
@@ -101,53 +99,53 @@ fun RunSetting() {
                                 fontSize = 15.sp,
                             )
                         }
+                    }
+                }
 
-                        // 右侧：操作按钮
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            when (state) {
-                                SurveyRunManager.RunState.IDLE -> {
-                                    ActionButton(
-                                        text = "运行",
-                                        color = Color(0xFF4CAF50),
-                                        enabled = true,
-                                        onClick = { SurveyRunManager.start() }
-                                    )
-                                }
+                // 右侧：操作按钮（不在 SelectionContainer 内，确保可点击）
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    when (state) {
+                        SurveyRunManager.RunState.IDLE -> {
+                            ActionButton(
+                                text = "运行",
+                                color = Color(0xFF4CAF50),
+                                enabled = true,
+                                onClick = { SurveyRunManager.start() }
+                            )
+                        }
 
-                                SurveyRunManager.RunState.RUNNING -> {
-                                    ActionButton(
-                                        text = "全部暂停",
-                                        color = Color(0xFFFFA726),
-                                        onClick = { SurveyRunManager.pauseAll() }
-                                    )
-                                    ActionButton(
-                                        text = "停止",
-                                        color = Color(0xFFEF5350),
-                                        onClick = { SurveyRunManager.stopAll() }
-                                    )
-                                }
+                        SurveyRunManager.RunState.RUNNING -> {
+                            ActionButton(
+                                text = "全部暂停",
+                                color = Color(0xFFFFA726),
+                                onClick = { SurveyRunManager.pauseAll() }
+                            )
+                            ActionButton(
+                                text = "停止",
+                                color = Color(0xFFEF5350),
+                                onClick = { SurveyRunManager.stopAll() }
+                            )
+                        }
 
-                                SurveyRunManager.RunState.PAUSED -> {
-                                    ActionButton(
-                                        text = "恢复运行",
-                                        color = Color(0xFF4CAF50),
-                                        onClick = { SurveyRunManager.resumeAll() }
-                                    )
-                                    ActionButton(
-                                        text = "停止",
-                                        color = Color(0xFFEF5350),
-                                        onClick = { SurveyRunManager.stopAll() }
-                                    )
-                                }
+                        SurveyRunManager.RunState.PAUSED -> {
+                            ActionButton(
+                                text = "恢复运行",
+                                color = Color(0xFF4CAF50),
+                                onClick = { SurveyRunManager.resumeAll() }
+                            )
+                            ActionButton(
+                                text = "停止",
+                                color = Color(0xFFEF5350),
+                                onClick = { SurveyRunManager.stopAll() }
+                            )
+                        }
 
-                                SurveyRunManager.RunState.STOPPING -> {
-                                    Text(
-                                        text = "停止中...",
-                                        color = Color(0xFFFF8A80),
-                                        fontSize = 16.sp
-                                    )
-                                }
-                            }
+                        SurveyRunManager.RunState.STOPPING -> {
+                            Text(
+                                text = "停止中...",
+                                color = Color(0xFFFF8A80),
+                                fontSize = 16.sp
+                            )
                         }
                     }
                 }

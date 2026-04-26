@@ -18,7 +18,7 @@ pluginManagement {
 dependencyResolutionManagement {
     repositories {
 
-//        maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
+        maven { url = uri("https://repo.huaweicloud.com/repository/maven/") }
 
         google {
             mavenContent {
