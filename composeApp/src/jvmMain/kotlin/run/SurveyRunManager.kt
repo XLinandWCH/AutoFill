@@ -341,24 +341,24 @@ object SurveyRunManager {
     /**
      * 处理选项内的填空题（如：其他_______）
      */
-    private fun handleChoiceTextInput(page: com.microsoft.playwright.Page, qIdx: Int, optIdx: Int, qNum: Int, antiBot: Boolean) {
+    private fun handleChoiceTextInput(page: com.microsoft.playwright.Page, qIdx: Int, optIdx: Int, qNum: Int, antiBot: Boolean, logIndex: Int) {
         val text = AnswerDictionary.optionTexts.getOrNull(qIdx)?.getOrNull(optIdx) ?: ""
         if (text.isNotBlank()) {
+            val prefix = "【第${qNum}题】选项补充-"
             // WJX 常见的选项内填空 ID 格式：t_qX_Y 或在 label 同级下的 input
             val selector = "#t_q${qNum}_${optIdx + 1}"
             if (page.querySelector(selector) != null) {
-                AntiBotUtils.humanType(page, selector, text, antiBot)
+                val act = AntiBotUtils.humanType(page, selector, text, antiBot)
+                updateLog(logIndex, "运行中", "$prefix$act")
             } else {
                 // 兜底尝试查找该题目下的所有文本框
                 val inputs = page.querySelectorAll("#div$qNum input[type=text]")
-                if (inputs.isNotEmpty()) {
-                    // 通常选中的选项对应的输入框是可见的或者在它附近
-                    for (input in inputs) {
-                        if (input.isVisible) {
-                            val id = input.getAttribute("id") ?: ""
-                            AntiBotUtils.humanType(page, "#$id", text, antiBot)
-                            break
-                        }
+                for (input in inputs) {
+                    if (input.isVisible) {
+                        val id = input.getAttribute("id") ?: ""
+                        val act = AntiBotUtils.humanType(page, "#$id", text, antiBot)
+                        updateLog(logIndex, "运行中", "$prefix$act")
+                        break
                     }
                 }
             }

@@ -11,6 +11,7 @@ object AnswerDictionary {
     val typeMap = mutableMapOf<Int, Int>() 
     val hasTextInputMap = mutableMapOf<Int, List<Boolean>>()
     val matrixColsMap = mutableMapOf<Int, List<String>>()
+    var currentUrl: String = ""
     private var pendingAnswers: List<List<String>>? = null
     private var pendingOptionTexts: List<List<String>>? = null
 

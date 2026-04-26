@@ -45,11 +45,18 @@ fun HomeOther(
                 )
                 Column {
 
-                    OtherButton("保存")
+                    OtherButton("保存") {
+                        saveSurveyConfig()
+                    }
 
-                    OtherButton("导入")
+                    OtherButton("导入") {
+                        importSurveyConfig()
+                        onDismiss()
+                    }
 
-                    OtherButton("检查更新")
+                    OtherButton("检查更新") {
+                        checkForUpdates()
+                    }
 
                 }
 
