@@ -27,11 +27,10 @@ object SurveyRunManager {
 
     // ─── 任务日志条目 ───────────────────────────────────────────
     data class TaskLogEntry(
-        val id: Int,              // 内部自增 ID，用于显示
-        val taskId: Int,          // 业务任务编号
-        val threadName: String,   // 执行线程名称
+        val id: Int,              // 线程 ID (1, 2, 3...)
+        val threadName: String,   // 线程名称
         var status: String,       // 状态文字
-        var taskProgress: String, // 进度文字
+        var taskProgress: String, // 该线程进度 (已完成/总分配)
         var detail: String = ""   // 详情
     )
 
@@ -86,7 +85,7 @@ object SurveyRunManager {
 
         val url = surveyUrl.value
         if (url.isBlank()) {
-            addLog(TaskLogEntry(1, 0, "主线程", "失败", "0/0", "未加载问卷链接"))
+            addLog(TaskLogEntry(1, "主线程", "失败", "0/0", "未加载问卷链接"))
             return
         }
 
@@ -103,14 +102,25 @@ object SurveyRunManager {
         val target = totalTarget.value.coerceAtLeast(1)
         val headless = isHeadlessEnabled.value
         val antiBot = isAntiBotEnabled.value
-        val taskCounter = AtomicInteger(0)
+        
+        // ─── 计算任务分配 ───
+        val baseTasks = target / threads
+        val remainder = target % threads
 
         executor = Executors.newFixedThreadPool(threads)
 
         // 启动工作线程
         repeat(threads) { threadIdx ->
+            val myThreadId = threadIdx + 1
+            val tasksForThisThread = baseTasks + (if (threadIdx < remainder) 1 else 0)
+            
+            // 立即为每个线程占位一条日志 (ID 固定为 1, 2, 3...)
+            addLog(TaskLogEntry(myThreadId, "线程-$myThreadId", "准备中", "0/$tasksForThisThread", "等待浏览器启动..."))
+
             executor?.submit {
-                val tName = "线程-${threadIdx + 1}"
+                val tName = "线程-$myThreadId"
+                var myCompleted = 0
+                
                 try {
                     Playwright.create().use { pw ->
                         val browser = pw.chromium().launch(
@@ -127,53 +137,50 @@ object SurveyRunManager {
                                 ))
                         )
 
-                        while (!stopRequested.get()) {
-                            val currentTaskNum = taskCounter.incrementAndGet()
-                            if (currentTaskNum > target) break
-
-                            // ─── 立即添加“运行中”日志 ───
-                            val logIndex = addLog(
-                                TaskLogEntry(
-                                    id = 0, // addLog 会分配 id
-                                    taskId = currentTaskNum,
-                                    threadName = tName,
-                                    status = "运行中",
-                                    taskProgress = "$currentTaskNum/$target",
-                                    detail = "正在打开问卷..."
-                                )
-                            )
+                        repeat(tasksForThisThread) { 
+                            if (stopRequested.get()) return@repeat
+                            
+                            val currentStep = it + 1
+                            val logIdx = threadIdx // 对应预先添加的行
+                            val progress = "$myCompleted/$tasksForThisThread"
 
                             try {
+                                updateLog(logIdx, "运行中", "正在打开页面...", progress)
+                                
                                 val context = browser.newContext()
                                 val page = context.newPage()
                                 page.navigate(url)
                                 page.waitForLoadState(LoadState.NETWORKIDLE)
 
-                                updateLog(logIndex, "运行中", "正在初始化页面...")
-                                
-                                // 读取 AnswerDictionary 数据并填写
-                                fillSurvey(page, currentTaskNum, tName, antiBot, logIndex)
+                                // 详细填表过程
+                                fillSurvey(page, currentStep, tName, antiBot, logIdx, tasksForThisThread, myCompleted)
 
                                 context.close()
-                                val sCount = successCount.incrementAndGet()
-                                updateLog(logIndex, "成功", "任务完成", "$sCount/$target")
-                                completedCount.value = sCount + failCount.get()
+                                myCompleted++
+                                successCount.incrementAndGet()
+                                completedCount.value = successCount.get() + failCount.get()
+                                updateLog(logIdx, "运行中", "任务完成", "$myCompleted/$tasksForThisThread")
                             } catch (e: Exception) {
-                                val fCount = failCount.incrementAndGet()
-                                updateLog(logIndex, "失败", "失败: ${e.message?.take(50)}", "${successCount.get()}/$target")
-                                completedCount.value = successCount.get() + fCount
+                                myCompleted++
+                                failCount.incrementAndGet()
+                                completedCount.value = successCount.get() + failCount.get()
+                                updateLog(logIdx, "运行中", "单次任务失败: ${e.message?.take(30)}", "$myCompleted/$tasksForThisThread")
                             }
 
-                            if (antiBot && !stopRequested.get()) {
+                            if (antiBot && !stopRequested.get() && currentStep < tasksForThisThread) {
                                 Thread.sleep((2000L..4000L).random())
                             }
                         }
+                        
+                        // 线程最终状态
+                        updateLog(threadIdx, "已结束", "所有分配任务已处理", "$myCompleted/$tasksForThisThread")
                         browser.close()
                     }
                 } catch (e: Exception) {
-                    addLog(TaskLogEntry(0, 0, tName, "错误", "0/0", "初始化失败: ${e.message?.take(50)}"))
+                    updateLog(threadIdx, "错误", "初始化失败: ${e.message?.take(30)}", "0/$tasksForThisThread")
                 }
 
+                // 检查是否全部完成
                 if (successCount.get() + failCount.get() >= target || stopRequested.get()) {
                     runState.value = RunState.IDLE
                 }
@@ -208,10 +215,10 @@ object SurveyRunManager {
     /**
      * 使用 Playwright Page 自动填写问卷
      */
-    private fun fillSurvey(page: com.microsoft.playwright.Page, taskId: Int, threadName: String, antiBot: Boolean, logIndex: Int) {
+    private fun fillSurvey(page: com.microsoft.playwright.Page, taskId: Int, threadName: String, antiBot: Boolean, logIndex: Int, threadTotal: Int, threadCompleted: Int) {
         val answers = AnswerDictionary.toPlainList()
         val types = AnswerDictionary.typeMap
-        val target = totalTarget.value
+        val progress = "$threadCompleted/$threadTotal"
 
         for ((qIdx, answerList) in answers.withIndex()) {
             if (stopRequested.get()) break
@@ -224,7 +231,7 @@ object SurveyRunManager {
                 // 每题作答前的基本延时
                 if (antiBot) {
                     val scrollDetail = AntiBotUtils.randomScroll(page)
-                    updateLog(logIndex, "运行中", scrollDetail, "$taskId/$target")
+                    updateLog(logIndex, "运行中", scrollDetail, progress)
                     AntiBotUtils.breatheDelay()
                 }
 
@@ -238,7 +245,7 @@ object SurveyRunManager {
                         val radios = page.querySelectorAll("#div$qNum .ui-radio")
                         if (chosen in radios.indices) {
                             val act = AntiBotUtils.humanClick(page, radios[chosen], antiBot)
-                            updateLog(logIndex, "运行中", "$prefix $act", "$taskId/$target")
+                            updateLog(logIndex, "运行中", "$prefix $act", progress)
                             handleChoiceTextInput(page, qIdx, chosen, qNum, antiBot, logIndex)
                         }
                     }
@@ -249,7 +256,7 @@ object SurveyRunManager {
                             val prob = answerList.getOrNull(i)?.toIntOrNull() ?: 50
                             if ((1..100).random() <= prob) {
                                 val act = AntiBotUtils.humanClick(page, cb, antiBot)
-                                updateLog(logIndex, "运行中", "$prefix $act", "$taskId/$target")
+                                updateLog(logIndex, "运行中", "$prefix $act", progress)
                                 handleChoiceTextInput(page, qIdx, i, qNum, antiBot, logIndex)
                             }
                         }
@@ -265,7 +272,7 @@ object SurveyRunManager {
                             }
                             if (chosen in options.indices) {
                                 selectEl.selectOption(options[chosen].getAttribute("value"))
-                                updateLog(logIndex, "运行中", "$prefix 选中下拉项", "$taskId/$target")
+                                updateLog(logIndex, "运行中", "$prefix 选中下拉项", progress)
                             }
                         }
                     }
@@ -275,7 +282,7 @@ object SurveyRunManager {
                         val rateButtons = page.querySelectorAll("#div$qNum .rate-off")
                         if (chosen in rateButtons.indices) {
                             val act = AntiBotUtils.humanClick(page, rateButtons[chosen], antiBot)
-                            updateLog(logIndex, "运行中", "$prefix $act", "$taskId/$target")
+                            updateLog(logIndex, "运行中", "$prefix $act", progress)
                         }
                     }
 
@@ -286,7 +293,7 @@ object SurveyRunManager {
                             val cells = page.querySelectorAll("#div$qNum tr[rowindex='$rowIdx'] .rate-off")
                             if (chosen in cells.indices) {
                                 val act = AntiBotUtils.humanClick(page, cells[chosen], antiBot)
-                                updateLog(logIndex, "运行中", "$prefix[行${rowIdx+1}] $act", "$taskId/$target")
+                                updateLog(logIndex, "运行中", "$prefix[行${rowIdx+1}] $act", progress)
                             }
                         }
                     }
@@ -294,14 +301,14 @@ object SurveyRunManager {
                     1 -> { // 填空题
                         val rawText = answerList.firstOrNull() ?: ""
                         val act = AntiBotUtils.humanType(page, "#q$qNum", rawText, antiBot)
-                        updateLog(logIndex, "运行中", "$prefix $act", "$taskId/$target")
+                        updateLog(logIndex, "运行中", "$prefix $act", progress)
                     }
 
                     9 -> { // 滑动条
                         for ((rowIdx, value) in answerList.withIndex()) {
                             val selector = "#q${qNum}_$rowIdx"
                             val act = AntiBotUtils.humanType(page, selector, value, antiBot)
-                            updateLog(logIndex, "运行中", "$prefix[项${rowIdx+1}] $act", "$taskId/$target")
+                            updateLog(logIndex, "运行中", "$prefix[项${rowIdx+1}] $act", progress)
                             page.querySelector(selector)?.dispatchEvent("change")
                         }
                     }
@@ -314,7 +321,7 @@ object SurveyRunManager {
                             val items = page.querySelectorAll("#div$qNum .ui-li-static")
                             if (i in items.indices) {
                                 val act = AntiBotUtils.humanClick(page, items[i], antiBot)
-                                updateLog(logIndex, "运行中", "$prefix 排序点击", "$taskId/$target")
+                                updateLog(logIndex, "运行中", "$prefix 排序点击", progress)
                             }
                         }
                     }
@@ -323,7 +330,7 @@ object SurveyRunManager {
                 // 每题做完后随机滚动
                 if (antiBot && (1..100).random() <= 25) {
                     val scrollDetail = AntiBotUtils.randomScroll(page)
-                    updateLog(logIndex, "运行中", scrollDetail, "$taskId/$target")
+                    updateLog(logIndex, "运行中", scrollDetail, progress)
                 }
 
             } catch (e: Exception) {

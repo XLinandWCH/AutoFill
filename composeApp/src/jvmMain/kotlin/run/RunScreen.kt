@@ -64,14 +64,15 @@ fun RunScreen() {
 
                         // ── 数据行 ──
                         if (taskLogs.isEmpty()) {
-                            // 空状态
+                            // 空状态或加载中状态
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
+                                val isRunning = SurveyRunManager.runState.value != SurveyRunManager.RunState.IDLE
                                 Text(
-                                    text = "暂无运行记录\n点击上方 \"运行\" 按钮开始自动填写问卷",
-                                    color = Color(0xFF888888),
+                                    text = if (isRunning) "请稍等，程序加载中..." else "暂无运行记录\n点击上方 \"运行\" 按钮开始自动填写问卷",
+                                    color = if (isRunning) Color(0xFF2BAC3B) else Color(0xFF888888),
                                     fontSize = 16.sp,
                                     textAlign = TextAlign.Center,
                                     lineHeight = 28.sp
