@@ -122,7 +122,11 @@ object SurveyRunManager {
                 var myCompleted = 0
                 
                 try {
-                    Playwright.create().use { pw ->
+                    // 关键：告诉运行引擎去我们自定义的路径查找内核
+                    val createOptions = com.microsoft.playwright.Playwright.CreateOptions()
+                        .setEnv(mapOf("PLAYWRIGHT_BROWSERS_PATH" to BrowserManager.BROWSERS_PATH))
+
+                    Playwright.create(createOptions).use { pw ->
                         val browser = pw.chromium().launch(
                             BrowserType.LaunchOptions()
                                 .setHeadless(headless)
