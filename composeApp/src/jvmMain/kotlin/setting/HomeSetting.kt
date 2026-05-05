@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -230,13 +231,39 @@ fun HomeSetting() {
                             )
                         }
 
+                        // 新增浏览器内核状态按钮
+                        Row(
+                            modifier = Modifier.padding(start = 12.dp, top = 24.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val isBrowserReady = other.BrowserManager.isBrowserReady.collectAsState()
+                            val statusText = if (isBrowserReady.value) "✅ 内核已就绪" else "❌ 内核缺失"
+                            val statusColor = if (isBrowserReady.value) Color(0xFF2BAC3B) else Color(0xFFD91E1E)
+
+                            Button(
+                                onClick = { other.BrowserManager.showDialog.value = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2BAC3B))
+                            ) {
+                                Text("检查与下载浏览器内核", color = Color.White)
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Text(
+                                text = statusText,
+                                color = statusColor,
+                                fontSize = 14.sp
+                            )
+                        }
+
                     }
 
                 }
             }
+
+            // 浏览器内核下载对话框已移至 App.kt 全局层
         }
 
 
     }
 }
-

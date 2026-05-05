@@ -123,8 +123,13 @@ object SurveyRunManager {
                 
                 try {
                     // 关键：告诉运行引擎去我们自定义的路径查找内核
+                    val browsersPath = other.BrowserManager.getEffectiveBrowsersPath()
                     val createOptions = com.microsoft.playwright.Playwright.CreateOptions()
-                        .setEnv(mapOf("PLAYWRIGHT_BROWSERS_PATH" to BrowserManager.BROWSERS_PATH))
+                        .setEnv(mapOf(
+                            "PLAYWRIGHT_BROWSERS_PATH" to browsersPath,
+                            "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" to "1", // 明确禁止在此处下载内核
+                            "PLAYWRIGHT_DOWNLOAD_HOST" to "https://npmmirror.com/mirrors/playwright/"
+                        ))
 
                     Playwright.create(createOptions).use { pw ->
                         val browser = pw.chromium().launch(
@@ -181,7 +186,9 @@ object SurveyRunManager {
                         browser.close()
                     }
                 } catch (e: Exception) {
-                    updateLog(threadIdx, "错误", "初始化失败: ${e.message?.take(30)}", "0/$tasksForThisThread")
+                    val errorDetail = e.message ?: e.toString()
+                    updateLog(threadIdx, "错误", "初始化失败: $errorDetail", "0/$tasksForThisThread")
+                    e.printStackTrace()
                 }
 
                 // 检查是否全部完成

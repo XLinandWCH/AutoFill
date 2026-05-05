@@ -59,10 +59,8 @@ fun HomeOther(
                         onDismiss()
                     }
 
-                    OtherButton("环境修复 (打不开浏览器点这个)") {
-                        fixEnvironment { status ->
-                            fixStatus = status
-                        }
+                    OtherButton("浏览器内核管理") {
+                        other.BrowserManager.showDialog.value = true
                     }
 
                 }

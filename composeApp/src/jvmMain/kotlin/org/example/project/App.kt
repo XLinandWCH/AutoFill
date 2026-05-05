@@ -9,6 +9,8 @@ import content.Home
 import run.HomeRun
 import setting.HomeSetting
 import Documentation.HomeDocumentation
+import other.BrowserStatusBanner
+import other.BrowserDownloadDialog
 
 @Composable
 @Preview
@@ -20,6 +22,9 @@ fun App() {
             currentScreen = screen
         })
 
+        // 全局浏览器状态横幅 —— 在所有页面顶部显示
+        BrowserStatusBanner()
+
         when(currentScreen) {
             "主页" -> Home()
             "运行" -> HomeRun()
@@ -27,4 +32,7 @@ fun App() {
             "文档" -> HomeDocumentation()
         }
     }
+
+    // 全局浏览器下载对话框（可从横幅或设置页触发）
+    BrowserDownloadDialog()
 }
