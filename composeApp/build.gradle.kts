@@ -77,7 +77,7 @@ compose.desktop {
             // 在这里加上 TargetFormat.Zip
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "AutoFill"
-            packageVersion = "1.0.4"
+            packageVersion = "1.0.3"
 
             // --- 在这里配置图标 ---
 

@@ -21,6 +21,9 @@ fun main() {
     // 初始化 Playwright 环境
     other.initPlaywrightSystemProperties()
     
+    // 自动检查并下载浏览器内核
+    other.BrowserManager.startBackgroundCheckAndDownload()
+    
     application {
         Window(
             onCloseRequest = ::exitApplication,

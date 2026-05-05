@@ -230,13 +230,28 @@ fun HomeSetting() {
                             )
                         }
 
+                        // 新增浏览器内核状态按钮
+                        Row(
+                            modifier = Modifier.padding(start = 12.dp, top = 24.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = { other.BrowserManager.showDialog.value = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2BAC3B))
+                            ) {
+                                Text("检查与下载浏览器内核", color = Color.White)
+                            }
+                        }
+
                     }
 
                 }
             }
+
+            // 加载浏览器内核下载对话框
+            other.BrowserDownloadDialog()
         }
 
 
     }
 }
-
