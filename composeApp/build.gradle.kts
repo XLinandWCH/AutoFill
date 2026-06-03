@@ -9,9 +9,9 @@ plugins {
 
 repositories {
     // 阿里云镜像仓库
-    maven { url = uri("https://maven.aliyun.com/repository/public/") }
-    maven { url = uri("https://maven.aliyun.com/repository/central/") }
-    maven { url = uri("https://maven.aliyun.com/repository/google/") }
+//    maven { url = uri("https://maven.aliyun.com/repository/public/") }
+//    maven { url = uri("https://maven.aliyun.com/repository/central/") }
+//    maven { url = uri("https://maven.aliyun.com/repository/google/") }
 
     // 保留官方仓库作为后备
     mavenCentral()
@@ -75,7 +75,7 @@ compose.desktop {
 
         nativeDistributions {
             // 关键：Playwright 驱动提取需要 jdk.zipfs 模块
-            modules("jdk.zipfs")
+            modules("jdk.zipfs", "jdk.crypto.ec")
 
             // 在这里加上 TargetFormat.Zip
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)

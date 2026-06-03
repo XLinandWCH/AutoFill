@@ -169,11 +169,14 @@ object SurveyRunManager {
                                 successCount.incrementAndGet()
                                 completedCount.value = successCount.get() + failCount.get()
                                 updateLog(logIdx, "运行中", "任务完成", "$myCompleted/$tasksForThisThread")
-                            } catch (e: Exception) {
-                                myCompleted++
+                            } catch (t: Throwable) {
+                                // 不增加 myCompleted，因为失败了
                                 failCount.incrementAndGet()
                                 completedCount.value = successCount.get() + failCount.get()
-                                updateLog(logIdx, "运行中", "单次任务失败: ${e.message?.take(30)}", "$myCompleted/$tasksForThisThread")
+                                val errorMsg = t.message ?: t.javaClass.simpleName
+                                updateLog(logIdx, "失败", "任务报错: $errorMsg", "$myCompleted/$tasksForThisThread")
+                                println("[$tName] 任务报错:")
+                                t.printStackTrace()
                             }
 
                             if (antiBot && !stopRequested.get() && currentStep < tasksForThisThread) {
@@ -182,13 +185,20 @@ object SurveyRunManager {
                         }
                         
                         // 线程最终状态
-                        updateLog(threadIdx, "已结束", "所有分配任务已处理", "$myCompleted/$tasksForThisThread")
+                        val finalState = if (myCompleted < tasksForThisThread) "异常中止" else "已结束"
+                        val finalMsg = if (myCompleted < tasksForThisThread) "部分任务失败，请查看控制台或上方日志" else "所有分配任务已处理"
+                        // 如果有错误导致很快结束，为了让用户看到错误，我们把最后的错误信息保留一下
+                        val currentLog = taskLogs.getOrNull(threadIdx)?.detail ?: ""
+                        val displayMsg = if (currentLog.contains("失败")) currentLog else finalMsg
+                        
+                        updateLog(threadIdx, finalState, displayMsg, "$myCompleted/$tasksForThisThread")
                         browser.close()
                     }
-                } catch (e: Exception) {
-                    val errorDetail = e.message ?: e.toString()
+                } catch (t: Throwable) {
+                    val errorDetail = t.message ?: t.javaClass.simpleName
                     updateLog(threadIdx, "错误", "初始化失败: $errorDetail", "0/$tasksForThisThread")
-                    e.printStackTrace()
+                    println("[$tName] 初始化或运行致命失败:")
+                    t.printStackTrace()
                 }
 
                 // 检查是否全部完成
@@ -344,8 +354,10 @@ object SurveyRunManager {
                     updateLog(logIndex, "运行中", scrollDetail, progress)
                 }
 
-            } catch (e: Exception) {
-                println("[$threadName] 题目 $qNum 填写异常: ${e.message}")
+            } catch (t: Throwable) {
+                val errorMsg = t.message ?: t.javaClass.simpleName
+                println("[$threadName] 题目 $qNum 填写异常: $errorMsg")
+                t.printStackTrace()
             }
         }
 

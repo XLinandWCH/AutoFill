@@ -1,4 +1,4 @@
-import com.microsoft.playwright.Playwright
+
 import com.microsoft.playwright.CLI
 
 fun main() {

@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   # ==========================================
-  # 阶段一：并行构建安装包
+  # 阶段一：并行构建 Native 安装包与分发产物
   # ==========================================
   build:
     strategy:
@@ -55,24 +55,29 @@ jobs:
         if: runner.os != 'Windows'
         run: chmod +x gradlew
 
-      - name: 执行打包命令
+      - name: 执行 Native 打包命令
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8"
-        # 修复点 1：显式加入 createDistributable 任务，强制 100% 生成 app 目录，防止被插件清理
+        # 显式按顺序执行：先创建完整的二进制分发目录，再打包成对应的系统原生安装包
         run: ./gradlew :composeApp:createDistributable :composeApp:${{ matrix.task }} --stacktrace
 
-      - name: 提取并重命名安装包
+      - name: 提取并重命名 Native 安装包
         shell: bash
         run: |
           mkdir -p release-pkg
           mv ${{ matrix.artifact_path }} release-pkg/${{ matrix.release_name }}
 
-      - name: 【Windows专属】生成 Zip 便携版
+      - name: 【Windows 专属】生成 Native Zip 便携版
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          # 修复点 2：先把丑陋的 app 文件夹改名为 AutoFill，再打包整个文件夹。避免解压后文件散落一地。
-          Rename-Item -Path "composeApp/build/compose/binaries/main/app" -NewName "AutoFill"
+          # 确保临时工作目录干净
+          if (Test-Path "composeApp/build/compose/binaries/main/AutoFill") { Remove-Item -Recurse -Force "composeApp/build/compose/binaries/main/AutoFill" }
+          
+          # 关键修复：从独立的 app 预打包目录复制出来，重命名为 AutoFill
+          Copy-Item -Path "composeApp/build/compose/binaries/main/app" -Destination "composeApp/build/compose/binaries/main/AutoFill" -Recurse
+          
+          # 压缩成绿色便携包（内部自带精简后的 runtime 运行环境，纯正 Native 体验）
           Compress-Archive -Path "composeApp/build/compose/binaries/main/AutoFill" -DestinationPath "release-pkg/AutoFill-${{ github.event.inputs.version }}-Windows-x64.zip"
 
       - name: 暂存构建产物
@@ -101,13 +106,16 @@ jobs:
           tag_name: ${{ github.event.inputs.version }}
           name: "AutoFill ${{ github.event.inputs.version }}"
           body: |
-            ### 🚀 AutoFill 全平台发布
+            ### 🚀 AutoFill 全平台 Native 发布
             
             #### 📥 下载指南
-            - **Windows 用户**：提供 `.msi` 安装包及 `.zip` 便携版。
-            - **macOS 用户**：下载 `.dmg` 文件安装。
-            - **Linux 用户**：下载 `.deb` 包安装。
+            - **Windows 用户**：提供 `.msi` 独立安装包及 `.zip` 绿色便携版（免安装，解压即用）。
+            - **macOS 用户**：下载 `.dmg` 文件双击拖拽安装。
+            - **Linux 用户**：下载 `.deb` 包使用包管理器安装。
             
+            *所有版本均已内置运行时环境，用户无需额外安装 Java/JRE。*
+            
+            ---
             *构建时间: ${{ github.event.repository.updated_at }}*
           draft: false
           prerelease: false
