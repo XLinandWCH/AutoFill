@@ -166,10 +166,10 @@ fun HomeSetting() {
                             modifier = Modifier.padding(start = 2.dp, end = 12.dp, top = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            androidx.compose.material3.Checkbox(
-                                checked = run.SurveyRunManager.isAntiBotEnabled.value,
-                                onCheckedChange = { run.SurveyRunManager.isAntiBotEnabled.value = it },
-                                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                            Checkbox(
+                                checked = SurveyRunManager.isAntiBotEnabled.value,
+                                onCheckedChange = { SurveyRunManager.isAntiBotEnabled.value = it },
+                                colors = CheckboxDefaults.colors(
                                     checkedColor = Color(0xFF69EF79),
                                     checkmarkColor = Color.Black,
                                     uncheckedColor = Color.White
@@ -186,10 +186,10 @@ fun HomeSetting() {
                             Spacer(modifier = Modifier.width(14.dp))
 
                             // 新增无头模式控制开关
-                            androidx.compose.material3.Checkbox(
-                                checked = run.SurveyRunManager.isHeadlessEnabled.value,
-                                onCheckedChange = { run.SurveyRunManager.isHeadlessEnabled.value = it },
-                                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                            Checkbox(
+                                checked = SurveyRunManager.isHeadlessEnabled.value,
+                                onCheckedChange = { SurveyRunManager.isHeadlessEnabled.value = it },
+                                colors = CheckboxDefaults.colors(
                                     checkedColor = Color(0xFF69EF79),
                                     checkmarkColor = Color.Black,
                                     uncheckedColor = Color.White
