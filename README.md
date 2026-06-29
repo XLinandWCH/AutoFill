@@ -106,10 +106,9 @@ gradlew.bat :composeApp:run
 
 ## 📬 联系与交流
 
-欢迎加入社区交流反馈，或提交 Issue/PR。
+- 提交： Issue/PR。
 
 - **Bilibili**: 雁影孑然
-- **QQ 交流群**: [1102686162](https://qm.qq.com/cgi-bin/qm/qr?k=1102686162) (新建群，人少但作者常在)
 
 ---
 
