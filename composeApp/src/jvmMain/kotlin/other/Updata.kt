@@ -19,14 +19,22 @@ fun initPlaywrightSystemProperties() {
     try {
         val appDataDir = System.getenv("APPDATA") ?: System.getProperty("user.home")
 
-        // ── 1. Driver extraction directory ───────────────────────────────────
+        // ── 1. Driver extraction directory ────────────────────────────────
         // Playwright extracts its bundled Node.js driver here.
-        // Using %APPDATA%/AutoFill/playwright-driver avoids temp-dir issues.
-        val driverDir = File(appDataDir, "AutoFill/playwright-driver")
+        //
+        // CRITICAL: Chinese Windows users have user.home = C:\Users\张三 which
+        // contains non-ASCII characters. Node.js (inside driver-bundle.zip) cannot
+        // be launched when its extraction path contains Unicode characters on Windows.
+        // Also, the deep node_modules tree inside driver-bundle easily exceeds the
+        // Windows MAX_PATH limit (260 chars) when starting from a long base path.
+        //
+        // Solution: use C:\Users\Public\AutoFill\drv — always ASCII, always short,
+        // always writable by every Windows user without admin rights.
+        val driverDir = resolvePlaywrightDriverDir(appDataDir)
         if (!driverDir.exists()) driverDir.mkdirs()
         System.setProperty("playwright.driver.tmpdir", driverDir.absolutePath)
 
-        // ── 2. Browsers path ─────────────────────────────────────────────────
+        // ── 2. Browsers path ────────────────────────────────────────
         // Ensure the directory exists before the env var is read.
         val browsersPath = BrowserManager.BROWSERS_PATH
         File(browsersPath).mkdirs()
@@ -50,6 +58,34 @@ fun initPlaywrightSystemProperties() {
     } catch (e: Exception) {
         println("[AutoFill] initPlaywrightSystemProperties failed: ${e.message}")
         e.printStackTrace()
+    }
+}
+
+/**
+ * Returns a short, ASCII-safe directory for Playwright's Node.js driver extraction.
+ *
+ * On Windows, the jlink-packaged app runs under a path that may contain the
+ * user's Windows login name. For Chinese users this is non-ASCII (e.g. C:\Users\张三).
+ * Playwright's Driver extracts a Node.js binary into a subdirectory and then
+ * launches it via ProcessBuilder. Node.js itself (the subprocess) fails to start
+ * when its argv[0] / CWD contains non-ASCII characters on older Windows versions.
+ * Additionally, the deeply-nested node_modules tree inside driver-bundle.zip
+ * makes the total path length exceed Windows MAX_PATH (260 chars) unless the
+ * base directory is short.
+ *
+ * C:\Users\Public is:
+ *   - Always ASCII (system-managed, never localised)
+ *   - Always writable by all users without administrator rights
+ *   - Short (20 chars) — leaves plenty of room under MAX_PATH
+ */
+private fun resolvePlaywrightDriverDir(appDataDir: String): File {
+    val os = System.getProperty("os.name", "").lowercase()
+    return if (os.contains("win")) {
+        // %PUBLIC% = C:\Users\Public on every Windows version (Vista+)
+        val publicDir = System.getenv("PUBLIC") ?: "C:\\Users\\Public"
+        File(publicDir, "AutoFill\\drv")
+    } else {
+        File(appDataDir, "AutoFill/playwright-driver")
     }
 }
 

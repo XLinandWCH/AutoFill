@@ -189,13 +189,26 @@ object SurveyRunManager {
                         browser.close()
                     }
                 } catch (t: Throwable) {
-                    val errorDetail = t.message ?: t.javaClass.simpleName
-                    updateLog(threadIdx, "错误", "初始化失败: $errorDetail", "0/$tasksForThisThread")
+                    // Walk the cause chain to find the deepest, most informative error.
+                    // Playwright wraps the real error in RuntimeException("Failed to create driver")
+                    // so t.message alone is useless. The actual cause (e.g. "Cannot run program",
+                    // "Access denied", MAX_PATH exceeded) is buried in t.cause.cause...
+                    val rootCause = generateSequence(t) { it.cause }.last()
+                    val errorDetail = buildString {
+                        append(t.message ?: t.javaClass.simpleName)
+                        if (rootCause !== t && !rootCause.message.isNullOrBlank()) {
+                            append(" → ").append(rootCause.message)
+                        }
+                    }
+                    val logPath = java.io.File(other.BrowserManager.BROWSERS_PATH, "playwright_error.log")
+                    updateLog(threadIdx, "错误",
+                        "初始化失败: $errorDetail\n详细日志: ${logPath.absolutePath}",
+                        "0/$tasksForThisThread")
                     println("[$tName] 初始化或运行致命失败:")
                     t.printStackTrace()
                     try {
-                        val logFile = java.io.File(other.BrowserManager.BROWSERS_PATH, "playwright_error.log")
-                        logFile.writeText(t.stackTraceToString())
+                        logPath.parentFile?.mkdirs()
+                        logPath.writeText(t.stackTraceToString())
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }

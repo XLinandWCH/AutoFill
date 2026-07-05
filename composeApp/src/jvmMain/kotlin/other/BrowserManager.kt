@@ -22,9 +22,44 @@ object BrowserManager {
 
     /** Where the Chromium kernel is stored on disk. */
     val BROWSERS_PATH: String by lazy {
-        val path = File(System.getProperty("user.home"), ".autofill/browsers")
+        val path = resolveBrowsersPath()
         if (!path.exists()) path.mkdirs()
         path.absolutePath
+    }
+
+    /**
+     * Returns the directory where the Chromium browser binary is stored.
+     *
+     * On Windows we use C:\Users\Public\AutoFill\browsers instead of the
+     * user's home directory because:
+     *  1. user.home may contain non-ASCII characters (Chinese username) which
+     *     cause Playwright to fail when pointing browsers at that path.
+     *  2. C:\Users\Public is always ASCII, always writable by every user,
+     *     and short enough to stay under the Windows MAX_PATH (260 chars) limit.
+     *
+     * If the old path (~/.autofill/browsers) already has a Chromium binary,
+     * it is migrated (renamed) to the new location automatically.
+     */
+    private fun resolveBrowsersPath(): File {
+        val os = System.getProperty("os.name", "").lowercase()
+        val newPath = if (os.contains("win")) {
+            val publicDir = System.getenv("PUBLIC") ?: "C:\\Users\\Public"
+            File(publicDir, "AutoFill\\browsers")
+        } else {
+            File(System.getProperty("user.home"), ".autofill/browsers")
+        }
+
+        // Migrate from old location (~/.autofill/browsers) if the new location
+        // does not yet exist but the old one does, so existing users don't have
+        // to re-download Chromium after updating the app.
+        if (!newPath.exists()) {
+            val oldPath = File(System.getProperty("user.home"), ".autofill/browsers")
+            if (oldPath.exists() && oldPath.absolutePath != newPath.absolutePath) {
+                oldPath.renameTo(newPath)
+            }
+        }
+
+        return newPath
     }
 
     // ── Observable state ──────────────────────────────────────────────────────

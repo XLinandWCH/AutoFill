@@ -82,11 +82,25 @@ compose.desktop {
         )
 
         nativeDistributions {
-            // jdk.zipfs  — Playwright driver ZIP extraction
-            // jdk.crypto.ec — TLS (HTTPS downloads)
-            // jdk.charsets  — GBK charset for Windows subprocess output
+            // jdk.zipfs       — Playwright driver ZIP extraction (ZipFileSystem NIO API)
+            // jdk.crypto.ec   — TLS elliptic-curve ciphers (HTTPS downloads)
+            // jdk.charsets    — GBK charset for Windows subprocess output
             // java.management — JVM management API
-            modules("jdk.zipfs", "jdk.crypto.ec", "jdk.charsets", "java.management")
+            // jdk.unsupported — sun.misc.Unsafe; required by Playwright's internal
+            //                   libraries (Netty, Agrona). Without this the Driver
+            //                   class fails to initialise, producing "Failed to create driver".
+            // jdk.crypto.mscapi — Windows system certificate store for HTTPS; without
+            //                     this the download subprocess may reject valid HTTPS certs.
+            // java.logging    — Playwright's internal logger uses java.util.logging.
+            modules(
+                "jdk.zipfs",
+                "jdk.crypto.ec",
+                "jdk.charsets",
+                "java.management",
+                "jdk.unsupported",
+                "jdk.crypto.mscapi",
+                "java.logging"
+            )
 
             // In this order: Dmg, Msi, Exe, Deb
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
