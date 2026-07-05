@@ -147,7 +147,8 @@ object BrowserManager {
                 "com.microsoft.playwright.CLI", "install", "chromium"
             )
             pb.environment()["PLAYWRIGHT_BROWSERS_PATH"] = BROWSERS_PATH
-            pb.environment()["PLAYWRIGHT_DOWNLOAD_HOST"] = "https://npmmirror.com/mirrors/playwright/"
+            pb.environment()["PLAYWRIGHT_DOWNLOAD_HOST"] = "https://npmmirror.com/mirrors/playwright"
+            pb.environment().remove("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD") // must not be set during download
             pb.redirectErrorStream(true)
 
             val process = pb.start()
@@ -188,7 +189,8 @@ object BrowserManager {
 
             val pb = ProcessBuilder(cmd)
             pb.environment()["PLAYWRIGHT_BROWSERS_PATH"] = BROWSERS_PATH
-            pb.environment()["PLAYWRIGHT_DOWNLOAD_HOST"] = "https://npmmirror.com/mirrors/playwright/"
+            pb.environment()["PLAYWRIGHT_DOWNLOAD_HOST"] = "https://npmmirror.com/mirrors/playwright"
+            pb.environment().remove("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD") // must not be set during download
             pb.redirectErrorStream(true)
 
             val process = pb.start()

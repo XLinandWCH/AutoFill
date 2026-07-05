@@ -35,9 +35,13 @@ fun initPlaywrightSystemProperties() {
         // Playwright's Driver class reads PLAYWRIGHT_BROWSERS_PATH from the
         // actual OS environment (System.getenv), not from system properties.
         // We must inject it before the first Playwright.create() call.
+        //
+        // NOTE: Do NOT set PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD here.
+        // BrowserManager handles the download via its own subprocess / CLI.main().
+        // Setting SKIP=1 in the live process env would be inherited by the
+        // download subprocess (Strategy 1) and block CLI.main() (Strategy 3).
         injectEnv("PLAYWRIGHT_BROWSERS_PATH", browsersPath)
-        injectEnv("PLAYWRIGHT_DOWNLOAD_HOST", "https://npmmirror.com/mirrors/playwright/")
-        injectEnv("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1")
+        injectEnv("PLAYWRIGHT_DOWNLOAD_HOST", "https://npmmirror.com/mirrors/playwright")
 
         println("[AutoFill] Driver dir : ${driverDir.absolutePath}")
         println("[AutoFill] Browsers path: $browsersPath")
