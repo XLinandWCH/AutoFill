@@ -3,26 +3,96 @@ package other
 import java.io.File
 
 /**
- * 启动时初始化 Playwright 系统属性
+ * Called once at JVM startup (before any Playwright API is touched).
  *
- * 设置驱动提取目录和浏览器路径，确保打包后的程序
- * 也能正确提取和定位 Playwright 驱动及浏览器内核。
+ * Playwright reads PLAYWRIGHT_BROWSERS_PATH **only** from the real OS environment.
+ * CreateOptions.setEnv() only affects the browser child-process, not the Node.js
+ * driver subprocess. Since we can't launch the app with the env var pre-set (it's
+ * a packaged MSI), we inject it directly into the live process environment here,
+ * using the correct field name for JVM 17+ on Windows.
+ *
+ * We also set playwright.driver.tmpdir so the driver ZIP is extracted to a stable,
+ * writable location under %APPDATA% rather than the system temp dir (which can have
+ * permission or path-length issues on some Windows installations).
  */
 fun initPlaywrightSystemProperties() {
     try {
-        // 1. 设置驱动提取目录（防止系统临时目录权限问题）
         val appDataDir = System.getenv("APPDATA") ?: System.getProperty("user.home")
+
+        // ── 1. Driver extraction directory ───────────────────────────────────
+        // Playwright extracts its bundled Node.js driver here.
+        // Using %APPDATA%/AutoFill/playwright-driver avoids temp-dir issues.
         val driverDir = File(appDataDir, "AutoFill/playwright-driver")
         if (!driverDir.exists()) driverDir.mkdirs()
         System.setProperty("playwright.driver.tmpdir", driverDir.absolutePath)
 
-        // 2. 确保浏览器存储目录存在
-        val browsersDir = File(BrowserManager.BROWSERS_PATH)
-        if (!browsersDir.exists()) browsersDir.mkdirs()
+        // ── 2. Browsers path ─────────────────────────────────────────────────
+        // Ensure the directory exists before the env var is read.
+        val browsersPath = BrowserManager.BROWSERS_PATH
+        File(browsersPath).mkdirs()
 
-        println("[AutoFill] Playwright 驱动目录: ${driverDir.absolutePath}")
-        println("[AutoFill] 浏览器内核目录: ${BrowserManager.BROWSERS_PATH}")
+        // ── 3. Inject env vars into the live process ─────────────────────────
+        // Playwright's Driver class reads PLAYWRIGHT_BROWSERS_PATH from the
+        // actual OS environment (System.getenv), not from system properties.
+        // We must inject it before the first Playwright.create() call.
+        injectEnv("PLAYWRIGHT_BROWSERS_PATH", browsersPath)
+        injectEnv("PLAYWRIGHT_DOWNLOAD_HOST", "https://npmmirror.com/mirrors/playwright/")
+        injectEnv("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1")
+
+        println("[AutoFill] Driver dir : ${driverDir.absolutePath}")
+        println("[AutoFill] Browsers path: $browsersPath")
+        println("[AutoFill] Env injected : PLAYWRIGHT_BROWSERS_PATH=$browsersPath")
+
     } catch (e: Exception) {
-        println("[AutoFill] 初始化 Playwright 属性失败: ${e.message}")
+        println("[AutoFill] initPlaywrightSystemProperties failed: ${e.message}")
+        e.printStackTrace()
+    }
+}
+
+/**
+ * Injects [key]=[value] into the current process's environment map.
+ *
+ * On JVM 17+, ProcessEnvironment stores the mutable map under the field
+ * "theEnvironment" (not "m" as in JDK 8). We try both field names so the
+ * code works across JDK versions.
+ *
+ * This is the only way to set env vars in a running JVM process; it is an
+ * intentional workaround for a well-known limitation of the Java platform.
+ */
+@Suppress("UNCHECKED_CAST")
+private fun injectEnv(key: String, value: String) {
+    // The unmodifiable view returned by System.getenv() delegates to the
+    // internal ProcessEnvironment. We need the mutable backing map.
+    val processEnvironmentClass = Class.forName("java.lang.ProcessEnvironment")
+
+    // JDK 17+: field is "theEnvironment"
+    // JDK 8/11: field is "m" (inside the unmodifiable wrapper)
+    val fieldNames = listOf("theEnvironment", "m")
+    var injected = false
+
+    for (fieldName in fieldNames) {
+        try {
+            val field = processEnvironmentClass.getDeclaredField(fieldName)
+            field.isAccessible = true
+            val map = field.get(null) as? MutableMap<String, String> ?: continue
+            map[key] = value
+            injected = true
+            break
+        } catch (_: NoSuchFieldException) {
+            // try next field name
+        }
+    }
+
+    if (!injected) {
+        // Last resort: try the unmodifiable wrapper's delegate map
+        try {
+            val envMap = System.getenv()
+            val field = envMap.javaClass.getDeclaredField("m")
+            field.isAccessible = true
+            val map = field.get(envMap) as MutableMap<String, String>
+            map[key] = value
+        } catch (e: Exception) {
+            println("[AutoFill] Could not inject env var $key: ${e.message}")
+        }
     }
 }

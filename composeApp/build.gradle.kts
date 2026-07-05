@@ -73,26 +73,40 @@ compose.desktop {
     application {
         mainClass = "org.example.project.MainKt"
 
+        // Allow reflection-based env-var injection into java.lang.ProcessEnvironment.
+        // Required on JVM 17+ for initPlaywrightSystemProperties() in Updata.kt to work
+        // in the packaged app (jlink runtime enforces strong encapsulation by default).
+        jvmArgs += listOf(
+            "--add-opens=java.base/java.lang=ALL-UNNAMED",
+            "--add-opens=java.base/java.util=ALL-UNNAMED"
+        )
+
         nativeDistributions {
-            // 关键：Playwright 驱动提取需要 jdk.zipfs 模块
-            modules("jdk.zipfs", "jdk.crypto.ec")
+            // jdk.zipfs  — Playwright driver ZIP extraction
+            // jdk.crypto.ec — TLS (HTTPS downloads)
+            // jdk.charsets  — GBK charset for Windows subprocess output
+            // java.management — JVM management API
+            modules("jdk.zipfs", "jdk.crypto.ec", "jdk.charsets", "java.management")
 
-            // 在这里加上 TargetFormat.Zip
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            // In this order: Dmg, Msi, Exe, Deb
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "AutoFill"
-            packageVersion = "1.0.3"
+            packageVersion = "1.0.5"
 
-            // --- 在这里配置图标 ---
+            buildTypes.release.proguard {
+                configurationFiles.from(project.file("proguard-rules.pro"))
+                isEnabled.set(true)
+                obfuscate.set(false) // keep shrinking, disable obfuscation to prevent reflection breakage
+            }
 
             linux {
                 iconFile.set(project.file("../icons/AutoFill.png"))
-                shortcut = true // 添加快捷方式
+                shortcut = true
             }
             windows {
                 iconFile.set(project.file("../icons/AutoFill.ico"))
-                // 如果你想在 Windows 安装菜单里显示特定的图标，也可以在这里设置
                 menuGroup = "MyKMPApp"
-                shortcut = true // 添加快捷方式
+                shortcut = true
             }
             macOS {
                 iconFile.set(project.file("../icons/AutoFill.icns"))

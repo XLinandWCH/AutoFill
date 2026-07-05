@@ -21,19 +21,19 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            task: packageMsi
+            task: packageReleaseMsi
             artifact_name: windows-app
-            artifact_path: composeApp/build/compose/binaries/main/msi/*.msi
+            artifact_path: composeApp/build/compose/binaries/main-release/msi/*.msi
             release_name: AutoFill-${{ github.event.inputs.version }}-Windows-x64.msi
           - os: macos-latest
-            task: packageDmg
+            task: packageReleaseDmg
             artifact_name: macos-app
-            artifact_path: composeApp/build/compose/binaries/main/dmg/*.dmg
+            artifact_path: composeApp/build/compose/binaries/main-release/dmg/*.dmg
             release_name: AutoFill-${{ github.event.inputs.version }}-macOS-x64.dmg
           - os: ubuntu-latest
-            task: packageDeb
+            task: packageReleaseDeb
             artifact_name: linux-app
-            artifact_path: composeApp/build/compose/binaries/main/deb/*.deb
+            artifact_path: composeApp/build/compose/binaries/main-release/deb/*.deb
             release_name: AutoFill-${{ github.event.inputs.version }}-Ubuntu-x64.deb
 
     runs-on: ${{ matrix.os }}
@@ -59,7 +59,7 @@ jobs:
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8"
         # 显式按顺序执行：先创建完整的二进制分发目录，再打包成对应的系统原生安装包
-        run: ./gradlew :composeApp:createDistributable :composeApp:${{ matrix.task }} --stacktrace
+        run: ./gradlew :composeApp:createReleaseDistributable :composeApp:${{ matrix.task }} --stacktrace
 
       - name: 提取并重命名 Native 安装包
         shell: bash
@@ -71,14 +71,14 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          # 确保临时工作目录干净
-          if (Test-Path "composeApp/build/compose/binaries/main/AutoFill") { Remove-Item -Recurse -Force "composeApp/build/compose/binaries/main/AutoFill" }
+          # Clean up temp dir from any previous run
+          if (Test-Path "composeApp/build/compose/binaries/main-release/AutoFill") { Remove-Item -Recurse -Force "composeApp/build/compose/binaries/main-release/AutoFill" }
           
-          # 关键修复：从独立的 app 预打包目录复制出来，重命名为 AutoFill
-          Copy-Item -Path "composeApp/build/compose/binaries/main/app" -Destination "composeApp/build/compose/binaries/main/AutoFill" -Recurse
+          # Copy the release distributable and rename for the ZIP
+          Copy-Item -Path "composeApp/build/compose/binaries/main-release/app" -Destination "composeApp/build/compose/binaries/main-release/AutoFill" -Recurse
           
-          # 压缩成绿色便携包（内部自带精简后的 runtime 运行环境，纯正 Native 体验）
-          Compress-Archive -Path "composeApp/build/compose/binaries/main/AutoFill" -DestinationPath "release-pkg/AutoFill-${{ github.event.inputs.version }}-Windows-x64.zip"
+          # Compress into a portable ZIP (includes bundled runtime — no Java install needed)
+          Compress-Archive -Path "composeApp/build/compose/binaries/main-release/AutoFill" -DestinationPath "release-pkg/AutoFill-${{ github.event.inputs.version }}-Windows-x64.zip"
 
       - name: 暂存构建产物
         uses: actions/upload-artifact@v4
